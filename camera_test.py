@@ -14,6 +14,7 @@ while True:
 
     # Combine two imgs
     h, w, ch = left_img.shape
+    print('height: {}, width: {}'.format(h, w))
     img = np.zeros((h, 2 * w, ch), dtype=np.uint8)
     img[:, :w, :], img[:, w:2*w, :] = left_img, right_img
 
