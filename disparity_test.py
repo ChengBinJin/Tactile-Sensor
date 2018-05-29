@@ -17,7 +17,7 @@ def main():
         show_stereo(left_img, right_img)
         show_disparity(left_img, right_img)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == 27:
             break
 
     # When everyting done, release the capture
@@ -48,10 +48,13 @@ def show_disparity(left_img, right_img):
     gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
     # stereo = cv2.StereoBM_create(numDisparities=0, blockSize=15)
-    min_disparity = -16
-    num_disparity = 16 - min_disparity
-    stereo = cv2.StereoSGBM_create(minDisparity=min_disparity, numDisparities=num_disparity, blockSize=15)
-    disparity = stereo.compute(gray_left, gray_right)
+    min_disparity = 0
+    num_disparity = 96  # maximum disparity minus minimum disparity
+    stereo = cv2.StereoSGBM_create(minDisparity=min_disparity, numDisparities=num_disparity, blockSize=5,
+                                   preFilterCap=4, uniquenessRatio=5, speckleWindowSize=150, speckleRange=2,
+                                   disp12MaxDiff=10, P1=600, P2=2400)
+    # disparity = stereo.compute(gray_left, gray_right)
+    disparity = stereo.compute(left_img, right_img)
     real_disparity = disparity.astype(np.float32) / 16.
     norm_disparity = (real_disparity - min_disparity) / num_disparity
 

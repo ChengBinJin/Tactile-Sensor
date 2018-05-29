@@ -15,14 +15,12 @@ def main():
     img[:, :w, :] = left.copy()
     img[:, w:2*w, :] = right.copy()
 
-    gray_left = cv2.cvtColor(left, cv2.COLOR_BGR2GRAY)
-    gray_right = cv2.cvtColor(right, cv2.COLOR_BGR2GRAY)
-
-    min_disparity = -16
-    num_disparity = 80 - min_disparity
-    stereo = cv2.StereoSGBM_create(minDisparity=min_disparity, numDisparities=num_disparity, blockSize=5)
-    disparity = stereo.compute(gray_left, gray_right)
-
+    min_disparity = 0
+    num_disparity = 64
+    stereo = cv2.StereoSGBM_create(minDisparity=min_disparity, numDisparities=num_disparity, blockSize=5,
+                                   preFilterCap=4, uniquenessRatio=5, speckleWindowSize=150, speckleRange=2,
+                                   disp12MaxDiff=10, P1=600, P2=2400)
+    disparity = stereo.compute(left, right)
     real_disparity = disparity.astype(np.float32) / 16.
     norm_disparity = (real_disparity - min_disparity) / num_disparity
 
