@@ -4,16 +4,17 @@ import numpy as np
 
 class SGBM(object):
     def __init__(self, shape):
-        min_disparity = 0
-        num_disparities = int((shape[1] / 8) + 15) & -16
+        self.min_disparity = 0
+        num_disparities = (int((shape[1] / 8) + 15) & -16) - self.min_disparity
         num_channel = 1
-        block_size = 3
+        block_size = 7
+        window_size = 3
 
-        self.stereo = cv2.StereoSGBM_create(minDisparity=min_disparity, numDisparities=num_disparities,
+        self.stereo = cv2.StereoSGBM_create(minDisparity=self.min_disparity, numDisparities=num_disparities,
                                             blockSize=block_size)
         self.stereo.setPreFilterCap(63)
-        self.stereo.setP1(8 * num_channel * block_size * block_size)
-        self.stereo.setP2(32 * num_channel * block_size * block_size)
+        self.stereo.setP1(8 * num_channel * window_size**2)
+        self.stereo.setP2(32 * num_channel * window_size**2)
         self.stereo.setUniquenessRatio(10)
         self.stereo.setSpeckleWindowSize(100)
         self.stereo.setSpeckleRange(2)
@@ -56,13 +57,14 @@ class SGBM(object):
 
         self.disparity = self.stereo.compute(gray_left, gray_right)
         # convert 12bit disparity to 8 bit integer and 4 bit float
-        self.real_disparity = self.disparity / 16
+        self.real_disparity = self.disparity.astype(np.float32) / 16.0
 
         return self.real_disparity
 
     def get_norm_disparity(self):
         # convert to integer and normalization
-        self.norm_disparity = (255. / self.stereo.getNumDisparities() * 16. * self.disparity).astype(np.uint8)
+        # self.norm_disparity = (255. / self.stereo.getNumDisparities() * 16. * self.disparity).astype(np.uint8)
+        self.norm_disparity = (self.real_disparity - self.min_disparity) / self.stereo.getNumDisparities()
         return self.norm_disparity
 
 
