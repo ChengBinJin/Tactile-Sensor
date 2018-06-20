@@ -18,6 +18,9 @@ def main():
         if not left_ret and not right_ret:
             print('can not read frame from one of the camera')
 
+        # left_img = left_img > 127.5
+        # right_img = right_img > 127.5
+
         show_stereo(left_img, right_img)
         show_disparity(stereo, left_img, right_img)
 
@@ -33,6 +36,10 @@ def main():
 def show_stereo(left_img, right_img):
     cv2.namedWindow('Stereo')
     cv2.moveWindow('Stereo', 0, 0)
+
+    # # thresholding
+    # left_img = (left_img > 127.5).astype(np.uint8) * 255
+    # right_img = (right_img > 127.5).astype(np.uint8) * 255
 
     # Combine two imgs, height = 480, width = 640
     h, w, ch = left_img.shape

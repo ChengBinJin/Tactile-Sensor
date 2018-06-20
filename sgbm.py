@@ -55,6 +55,10 @@ class SGBM(object):
         gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
 
+        # # thresholding
+        # gray_left = (gray_left > 127.5).astype(np.uint8) * 255
+        # gray_right = (gray_right > 127.5).astype(np.uint8) * 255
+
         self.disparity = self.stereo.compute(gray_left, gray_right)
         # convert 12bit disparity to 8 bit integer and 4 bit float
         self.real_disparity = self.disparity.astype(np.float32) / 16.0
