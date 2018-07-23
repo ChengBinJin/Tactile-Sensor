@@ -52,12 +52,14 @@ class SGBM(object):
         self.disparity, self.norm_disparity, self.real_disparity = None, None, None
 
     def compute(self, left_img, right_img):
-        gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
-        gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
-
-        # # thresholding
-        # gray_left = (gray_left > 127.5).astype(np.uint8) * 255
-        # gray_right = (gray_right > 127.5).astype(np.uint8) * 255
+        if (left_img.ndim == 3) and (right_img.ndim == 3):  # if input is RGB
+            gray_left = cv2.cvtColor(left_img, cv2.COLOR_BGR2GRAY)
+            gray_right = cv2.cvtColor(right_img, cv2.COLOR_BGR2GRAY)
+        elif (left_img.ndim == 2) and (right_img.ndim == 2):  # if input is Gray scale
+            gray_left = left_img.copy()
+            gray_right = right_img.copy()
+        else:
+            raise NotImplementedError
 
         self.disparity = self.stereo.compute(gray_left, gray_right)
         # convert 12bit disparity to 8 bit integer and 4 bit float

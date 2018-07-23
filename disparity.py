@@ -1,8 +1,9 @@
 import cv2
 import argparse
 
-from sgbm import SGBM
 import utils as utils
+from sgbm import SGBM
+from detector import Detector
 from utils import RecordVideo, Reader
 
 parser = argparse.ArgumentParser(description='')
@@ -17,14 +18,17 @@ def main():
     stereo = SGBM([480, 640])
     reader = Reader(args.input_video)
     video_writer = RecordVideo(args.video_record)
+    detector = Detector()
 
     while True:
         # read fraems
         left_img, right_img = reader.next_frame()
+        det_results = detector(left_img, right_img)
+        imgs = [left_img, right_img, det_results['left_blob'], det_results['right_blob']]
 
         # show restuls
-        utils.show_stereo(left_img, right_img, args.video_record, video_writer)
-        utils.show_disparity(stereo, left_img, right_img)
+        utils.show_stereo(imgs, args.video_record, video_writer)
+        utils.show_disparity(stereo, det_results['mask'], det_results['left_thres'], det_results['right_thres'])
 
         if cv2.waitKey(1) & 0xFF == 27:
             break

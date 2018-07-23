@@ -1,10 +1,12 @@
-import numpy as np
+import sys
 import cv2
+import numpy as np
 from datetime import datetime
 
 
 class RecordVideo(object):
     def __init__(self, is_record):
+        self.is_record = False
         if is_record:
             self.video_name = datetime.now().strftime("./videos/%Y%m%d-%H%M") + '.avi'
             width, height = 640, 480
@@ -50,7 +52,8 @@ class Reader(object):
         else:
             ret, frame = self.video_cap.read()
             if not ret:
-                print('Can not read frame from input video!')
+                print('Can not read next frame from input video!')
+                sys.exit()
 
             rgb_frame = frame[:, :, ::-1]  # bgr to rgb
             left_img, right_img = rgb_frame[:, :self.width, :], rgb_frame[:, self.width:, :]
@@ -58,14 +61,18 @@ class Reader(object):
             return left_img, right_img
 
 
-def show_stereo(left_img, right_img, video_record, video_writer=None):
+def show_stereo(imgs, video_record, video_writer=None):
+    left_img, right_img, left_blobs, right_blobs = imgs
+
     cv2.namedWindow('Stereo')
     cv2.moveWindow('Stereo', 0, 0)
 
     # Combine two imgs, height = 480, width = 640
     h, w, ch = left_img.shape
-    img = np.zeros((h, 2 * w, ch), dtype=np.uint8)
-    img[:, :w, :], img[:, w:2 * w, :] = left_img, right_img
+    img = np.zeros((2*h, 2*w, ch), dtype=np.uint8)
+    img[:h, :w, :], img[:h, w:2*w, :] = left_img, right_img
+    # img[h:2*h, :w, :], img[h:2*h, w:2*w, :] = np.expand_dims(left_blobs, axis=2), np.expand_dims(right_blobs, axis=2)
+    img[h:2 * h, :w, :], img[h:2 * h, w:2 * w, :] = left_blobs, right_blobs
 
     # Display the input frame
     cv2.imshow('Stereo', img)
@@ -74,9 +81,14 @@ def show_stereo(left_img, right_img, video_record, video_writer=None):
         video_writer.output.write(img)
 
 
-def show_disparity(stereo, left_img, right_img):
+def show_disparity(stereo, mask, left_img, right_img):
+    h, w = left_img.shape
+    canvas = np.zeros((2*h, 2*w), dtype=np.float32)
+
     real_disparity = stereo.compute(left_img, right_img)
     norm_disparity = stereo.get_norm_disparity()
 
-    cv2.imshow('real_disparity', real_disparity)
-    cv2.imshow('norm_disparity', norm_disparity)
+    canvas[:h, :w], canvas[:h, w:2*w] = real_disparity, norm_disparity
+    canvas[h:2*h, :w], canvas[h:2*h, w:2*w] = real_disparity * mask, norm_disparity * mask
+
+    cv2.imshow('Real & Normalized Disparity', canvas)
