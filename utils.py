@@ -64,8 +64,9 @@ class Reader(object):
 def show_stereo(imgs, video_record, video_writer=None):
     left_img, right_img, left_blobs, right_blobs = imgs
 
-    cv2.namedWindow('Stereo')
-    cv2.moveWindow('Stereo', 0, 0)
+    window_name = 'Input Frames'
+    cv2.namedWindow(window_name)
+    cv2.moveWindow(window_name, 0, 0)
 
     # Combine two imgs, height = 480, width = 640
     h, w, ch = left_img.shape
@@ -75,7 +76,7 @@ def show_stereo(imgs, video_record, video_writer=None):
     img[h:2 * h, :w, :], img[h:2 * h, w:2 * w, :] = left_blobs, right_blobs
 
     # Display the input frame
-    cv2.imshow('Stereo', img)
+    cv2.imshow(window_name, img)
 
     if video_record is True:
         video_writer.output.write(img)
