@@ -25,6 +25,7 @@ def main():
     reader = Reader(args.input_video)
     video_writer = RecordVideo(args.video_record, height=H, width=2*W)
     blob_writer = RecordVideo(args.result_record, height=2*H, width=2*W, vname='blob')
+    disp_writer = RecordVideo(args.result_record, height=2*H, width=2*W, vname='disp')
     detector = Detector(args)
 
     frame_idx = 0
@@ -39,8 +40,7 @@ def main():
 
         # show restuls
         utils.show_stereo(imgs, args, video_writer, blob_writer)
-        # utils.show_disparity(stereo, det_results['mask'], det_results['left_thres'], det_results['right_thres'])
-        utils.show_disparity(stereo, det_results)
+        utils.show_disparity(stereo, args, det_results, disp_writer)
 
         if cv2.waitKey(args.interval_time) & 0xFF == 27:
             break
@@ -53,6 +53,7 @@ def main():
     reader.turn_off()
     video_writer.turn_off()
     blob_writer.turn_off()
+    disp_writer.turn_off()
     detector.mask_writer.turn_off()
     cv2.destroyAllWindows()
 

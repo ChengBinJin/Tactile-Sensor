@@ -81,7 +81,7 @@ def show_stereo(imgs, args, video_writer=None, blob_writer=None):
         blob_writer.output.write(img)
 
 
-def show_disparity(stereo, det_results):
+def show_disparity(stereo, args, det_results, disp_writer):
     mask, left_img, right_img = det_results['mask'], det_results['left_thres'], det_results['right_thres']
 
     h, w = left_img.shape
@@ -91,8 +91,25 @@ def show_disparity(stereo, det_results):
     norm_disparity = stereo.get_norm_disparity()
 
     canvas[:h, :w], canvas[:h, w:2*w] = real_disparity, norm_disparity
-    canvas[h:2*h, :w], canvas[h:2*h, w:2*w] = real_disparity * mask, norm_disparity * mask
+    canvas[h:2*h, :w], canvas[h:2*h, w:2*w] = real_disparity * (mask / 255), norm_disparity * (mask / 255)
+
+    if args.result_record is True:
+        rec_canvas = create_record_canvas(h, w, real_disparity, norm_disparity, mask)
+        disp_writer.output.write(rec_canvas)
 
     cv2.imshow('Real & Normalized Disparity', canvas)
 
+
+def create_record_canvas(h, w, real_disparity, norm_disparity, mask):
+    canvas = np.zeros((2*h, 2*w), dtype=np.uint8)
+
+    real_disparity_2 = np.zeros(real_disparity.shape, dtype=np.uint8)
+    real_disparity_2[real_disparity > 1.] = 255
+    norm_disparity_2 = norm_disparity * 255
+    norm_disparity_2[norm_disparity_2 < 0] = 0
+
+    canvas[:h, :w], canvas[:h, w:2*w] = real_disparity_2, norm_disparity_2
+    canvas[h:2*h, :w], canvas[h:2*h, w:2*w] = real_disparity_2 * (mask / 255), norm_disparity_2 * (mask / 255)
+
+    return np.dstack((canvas, canvas, canvas))  # video write just save 3 channel frame
 
