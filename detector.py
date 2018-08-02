@@ -1,9 +1,14 @@
 import cv2
 import numpy as np
 
+from utils import RecordVideo
+
 
 class Detector(object):
-    def __init__(self):
+    def __init__(self, args):
+        self.args = args
+        self.mask_writer = RecordVideo(self.args.result_record, vname='mask')
+
         self.red = (0, 0, 255)
         self.white = (255, 255, 255)
         self.radius = 5
@@ -69,7 +74,10 @@ class Detector(object):
         det_results['mask'] = left_mask
 
         cv2.imshow('Left Mask', left_mask)
-        cv2.waitKey(1)
+
+        if self.args.result_record is True:
+            # the frame for recording have to be dimension equal to 3
+            self.mask_writer.output.write(np.dstack((left_mask, left_mask, left_mask)))
 
         return det_results
 

@@ -17,34 +17,43 @@ parser.add_argument('--interval_time', dest='interval_time', type=int, default=1
                     help='interval time between two frames')
 args = parser.parse_args()
 
+H, W = 480, 640
+
 
 def main():
-    stereo = SGBM([480, 640])
+    stereo = SGBM([H, W])
     reader = Reader(args.input_video)
-    video_writer = RecordVideo(args.video_record)
-    detector = Detector()
+    video_writer = RecordVideo(args.video_record, height=H, width=2*W)
+    blob_writer = RecordVideo(args.result_record, height=2*H, width=2*W, vname='blob')
+    detector = Detector(args)
 
     frame_idx = 0
     while True:
         # read fraems
         left_img, right_img = reader.next_frame()
+        if (left_img is None) or (right_img is None):
+            break
+
         det_results = detector(left_img, right_img)
         imgs = [left_img, right_img, det_results['left_blob'], det_results['right_blob']]
 
-        print('frame idx: {}'.format(frame_idx))
-
         # show restuls
-        utils.show_stereo(imgs, args.video_record, video_writer)
-        utils.show_disparity(stereo, det_results['mask'], det_results['left_thres'], det_results['right_thres'])
+        utils.show_stereo(imgs, args, video_writer, blob_writer)
+        # utils.show_disparity(stereo, det_results['mask'], det_results['left_thres'], det_results['right_thres'])
+        utils.show_disparity(stereo, det_results)
 
         if cv2.waitKey(args.interval_time) & 0xFF == 27:
             break
 
+        print('frame idx: {}'.format(frame_idx))
         frame_idx += 1
 
     # When everyting done, release the capture
+    print('Turn off the recordings')
     reader.turn_off()
     video_writer.turn_off()
+    blob_writer.turn_off()
+    detector.mask_writer.turn_off()
     cv2.destroyAllWindows()
 
 

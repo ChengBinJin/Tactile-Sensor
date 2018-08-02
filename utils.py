@@ -1,23 +1,20 @@
-import sys
 import cv2
 import numpy as np
 from datetime import datetime
 
 
 class RecordVideo(object):
-    def __init__(self, is_record):
+    def __init__(self, is_record, height=480, width=640, vname=None):
         self.is_record = False
         if is_record:
-            self.video_name = datetime.now().strftime("./videos/%Y%m%d-%H%M") + '.avi'
-            width, height = 640, 480
-
+            self.video_name = datetime.now().strftime("./videos/%Y%m%d-%H%M") + '-' + vname + '.avi'
             # define the codec and create VideoWriter object
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            self.output = cv2.VideoWriter(self.video_name, fourcc, 20.0, (width*2, height))
+            self.output = cv2.VideoWriter(self.video_name, fourcc, 20.0, (width, height))
             self.is_record = True
 
     def turn_off(self):
-        if self.is_record:
+        if self.is_record is True:
             self.output.release()
 
 
@@ -53,7 +50,7 @@ class Reader(object):
             ret, frame = self.video_cap.read()
             if not ret:
                 print('Can not read next frame from input video!')
-                sys.exit()
+                return None, None
 
             rgb_frame = frame[:, :, ::-1]  # bgr to rgb
             left_img, right_img = rgb_frame[:, :self.width, :], rgb_frame[:, self.width:, :]
@@ -61,7 +58,7 @@ class Reader(object):
             return left_img, right_img
 
 
-def show_stereo(imgs, video_record, video_writer=None):
+def show_stereo(imgs, args, video_writer=None, blob_writer=None):
     left_img, right_img, left_blobs, right_blobs = imgs
 
     window_name = 'Input Frames'
@@ -72,17 +69,21 @@ def show_stereo(imgs, video_record, video_writer=None):
     h, w, ch = left_img.shape
     img = np.zeros((2*h, 2*w, ch), dtype=np.uint8)
     img[:h, :w, :], img[:h, w:2*w, :] = left_img, right_img
-    # img[h:2*h, :w, :], img[h:2*h, w:2*w, :] = np.expand_dims(left_blobs, axis=2), np.expand_dims(right_blobs, axis=2)
     img[h:2 * h, :w, :], img[h:2 * h, w:2 * w, :] = left_blobs, right_blobs
 
     # Display the input frame
     cv2.imshow(window_name, img)
 
-    if video_record is True:
-        video_writer.output.write(img)
+    if args.video_record is True:
+        video_writer.output.write(img[:h, :2*w, :])
+
+    if args.result_record is True:
+        blob_writer.output.write(img)
 
 
-def show_disparity(stereo, mask, left_img, right_img):
+def show_disparity(stereo, det_results):
+    mask, left_img, right_img = det_results['mask'], det_results['left_thres'], det_results['right_thres']
+
     h, w = left_img.shape
     canvas = np.zeros((2*h, 2*w), dtype=np.float32)
 
@@ -93,3 +94,5 @@ def show_disparity(stereo, mask, left_img, right_img):
     canvas[h:2*h, :w], canvas[h:2*h, w:2*w] = real_disparity * mask, norm_disparity * mask
 
     cv2.imshow('Real & Normalized Disparity', canvas)
+
+
