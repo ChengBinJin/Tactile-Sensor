@@ -35,6 +35,7 @@ def main():
         if (left_img is None) or (right_img is None):
             break
 
+        # blob detection
         det_results = detector(left_img, right_img)
         imgs = [left_img, right_img, det_results['left_blob'], det_results['right_blob']]
 

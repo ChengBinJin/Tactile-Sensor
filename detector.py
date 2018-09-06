@@ -14,6 +14,7 @@ class Detector(object):
         self.radius = 5
         self.threshold = 127.5
         self.kernel = np.ones((5, 5), np.uint8)
+        self.width, self.height, self.channel = 640, 480, 3
 
         # Set up the SimpleBlobdetector with default parameters
         params = cv2.SimpleBlobDetector_Params()
@@ -68,6 +69,20 @@ class Detector(object):
                                       cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         right_blob = cv2.drawKeypoints(right_thres, right_keypoints, np.array([]), self.red,
                                        cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # left_blob = np.zeros((self.height, self.width, self.channel), dtype=np.uint8)
+        # right_blob = np.zeros((self.height, self.width, self.channel), dtype=np.uint8)
+
+        # add keypoints' center
+        for idx in range(len(left_keypoints)):
+            col, row, radius = int(left_keypoints[idx].pt[0]), int(left_keypoints[idx].pt[1]), left_keypoints[idx].size
+            cv2.circle(left_blob, (col, row), int(radius / 2), color=(255, 0, 0), thickness=-1)
+            left_blob[row-1:row+1, col-1:col+1, :] = [0, 0, 255]
+        for idx in range(len(right_keypoints)):
+            col, row, radius = \
+                int(right_keypoints[idx].pt[0]), int(right_keypoints[idx].pt[1]), right_keypoints[idx].size
+            cv2.circle(right_blob, (col, row), int(radius / 2), color=(255, 0, 0), thickness=-1)
+            right_blob[row-1:row+1, col-1:col+1, :] = [0, 0, 255]
+
         det_results['left_blob'], det_results['right_blob'] = left_blob, right_blob
 
         left_mask = self.generate_mask(left_thres, left_keypoints)
