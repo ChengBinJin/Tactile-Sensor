@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from tracker import Tracker
 from utils import RecordVideo
 
 
@@ -8,6 +9,9 @@ class Detector(object):
     def __init__(self, args):
         self.args = args
         self.mask_writer = RecordVideo(self.args.result_record, vname='mask')
+        self.left_tracker = Tracker()
+        self.right_tracker = Tracker()
+        self.sparse = 1  # accelerate tracking
 
         self.red = (0, 0, 255)
         self.white = (255, 255, 255)
@@ -65,29 +69,45 @@ class Detector(object):
 
         # Draw detected blobs as red circles.
         # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensure the size of the circle corresponds to the size of blob
-        left_blob = cv2.drawKeypoints(left_thres, left_keypoints, np.array([]), self.red,
-                                      cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        right_blob = cv2.drawKeypoints(right_thres, right_keypoints, np.array([]), self.red,
-                                       cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        # left_blob = np.zeros((self.height, self.width, self.channel), dtype=np.uint8)
-        # right_blob = np.zeros((self.height, self.width, self.channel), dtype=np.uint8)
+        # left_blob = cv2.drawKeypoints(left_thres, left_keypoints, np.array([]), self.red,
+        #                               cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # right_blob = cv2.drawKeypoints(right_thres, right_keypoints, np.array([]), self.red,
+        #                                cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        left_blob = np.dstack((left_thres, left_thres, left_thres))
+        right_blob = np.dstack((right_thres, right_thres, right_thres))
 
-        # add keypoints' center
-        for idx in range(len(left_keypoints)):
-            col, row, radius = int(left_keypoints[idx].pt[0]), int(left_keypoints[idx].pt[1]), left_keypoints[idx].size
-            cv2.circle(left_blob, (col, row), int(radius / 2), color=(255, 0, 0), thickness=-1)
-            left_blob[row-1:row+1, col-1:col+1, :] = [0, 0, 255]
-        for idx in range(len(right_keypoints)):
-            col, row, radius = \
-                int(right_keypoints[idx].pt[0]), int(right_keypoints[idx].pt[1]), right_keypoints[idx].size
-            cv2.circle(right_blob, (col, row), int(radius / 2), color=(255, 0, 0), thickness=-1)
-            right_blob[row-1:row+1, col-1:col+1, :] = [0, 0, 255]
+        if self.args.use_tracker:
+            # kalman filter with hungarian data association
+            left_dets, right_dets = self.list_to_array(left_keypoints, right_keypoints)
+            left_tracks = self.left_tracker.update(left_dets)
+            right_tracks = self.right_tracker.update(right_dets)
+
+            for idx in range(left_tracks.shape[0]):
+                col = int((left_tracks[idx, 0] + left_tracks[idx, 2]) / 2.)
+                row = int((left_tracks[idx, 1] + left_tracks[idx, 3]) / 2.)
+                radius = int((left_tracks[idx, 2] - left_tracks[idx, 0]) / 2.)
+                cv2.circle(left_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+            for idx in range(right_tracks.shape[0]):
+                col = int((right_tracks[idx, 0] + right_tracks[idx, 2]) / 2.)
+                row = int((right_tracks[idx, 1] + right_tracks[idx, 3]) / 2.)
+                radius = int((right_tracks[idx, 2] - right_tracks[idx, 0]) / 2.)
+                cv2.circle(right_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+        else:
+            # add keypoints' center and draw circle
+            for idx in range(len(left_keypoints)):
+                col, row = int(left_keypoints[idx].pt[0]), int(left_keypoints[idx].pt[1])
+                radius = int(left_keypoints[idx].size / 2)
+                cv2.circle(left_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                left_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
+            for idx in range(len(right_keypoints)):
+                col, row = int(right_keypoints[idx].pt[0]), int(right_keypoints[idx].pt[1])
+                radius = int(right_keypoints[idx].size / 2)
+                cv2.circle(right_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                right_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
 
         det_results['left_blob'], det_results['right_blob'] = left_blob, right_blob
-
         left_mask = self.generate_mask(left_thres, left_keypoints)
         det_results['mask'] = left_mask
-
         cv2.imshow('Left Mask', left_mask)
 
         if self.args.result_record is True:
@@ -104,3 +124,28 @@ class Detector(object):
                        radius=int(np.floor(keypoint.size / 2.)), color=self.white, thickness=-1)
 
         return mask
+
+    def list_to_array(self, left_keypoints, right_keypoints):
+        left_dets = np.zeros((int(np.ceil(len(left_keypoints) / self.sparse)), 5), dtype=np.float32)
+        right_dets = np.zeros((int(np.ceil(len(right_keypoints) / self.sparse)), 5), dtype=np.float32)
+
+        # save as (x1, y1, x2, y2)
+        idx = 0
+        for i in range(0, len(left_keypoints), self.sparse):
+            radius = left_keypoints[idx].size / 2.
+            left_dets[idx, 0] = np.maximum(0, left_keypoints[i].pt[0] - radius)
+            left_dets[idx, 1] = np.maximum(0, left_keypoints[i].pt[1] - radius)
+            left_dets[idx, 2] = np.minimum(left_keypoints[i].pt[0] + radius, self.width)
+            left_dets[idx, 3] = np.minimum(left_keypoints[i].pt[1] + radius, self.height)
+            idx += 1
+
+        idx = 0
+        for i in range(0, len(right_keypoints), self.sparse):
+            radius = right_keypoints[idx].size / 2.
+            right_dets[idx, 0] = np.maximum(0, right_keypoints[i].pt[0] - radius)
+            right_dets[idx, 1] = np.maximum(0, right_keypoints[i].pt[1] - radius)
+            right_dets[idx, 2] = np.minimum(right_keypoints[i].pt[0] + radius, self.width)
+            right_dets[idx, 3] = np.minimum(right_keypoints[i].pt[1] + radius, self.height)
+            idx += 1
+
+        return left_dets, right_dets

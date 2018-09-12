@@ -135,11 +135,7 @@ with detection_graph.as_default():
                 use_normalized_coordinates=True,
                 line_thickness=8)
 
-
-
             tracker_result = tracker.update(det_results)
-
-
 
             for d in tracker_result:
                 d = d.astype(np.int32)
