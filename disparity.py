@@ -13,6 +13,7 @@ parser.add_argument('--result_record', dest='result_record', action='store_true'
                     help='record result video or not')
 parser.add_argument('--use_tracker', dest='use_tracker', action='store_true', default=False,
                     help='use tracker or not')
+parser.add_argument('--sparsity', dest='sparsity', type=int, default=1, help='tracker sparsity for acceleration')
 parser.add_argument('--input_video', dest='input_video', type=str, default='./videos/20180716-1733.avi',
                     help='input video')
 parser.add_argument('--interval_time', dest='interval_time', type=int, default=1,

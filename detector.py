@@ -11,7 +11,7 @@ class Detector(object):
         self.mask_writer = RecordVideo(self.args.result_record, vname='mask')
         self.left_tracker = Tracker()
         self.right_tracker = Tracker()
-        self.sparse = 1  # accelerate tracking
+        self.sparsity = self.args.sparsity  # accelerate tracking
 
         self.red = (0, 0, 255)
         self.white = (255, 255, 255)
@@ -126,12 +126,12 @@ class Detector(object):
         return mask
 
     def list_to_array(self, left_keypoints, right_keypoints):
-        left_dets = np.zeros((int(np.ceil(len(left_keypoints) / self.sparse)), 5), dtype=np.float32)
-        right_dets = np.zeros((int(np.ceil(len(right_keypoints) / self.sparse)), 5), dtype=np.float32)
+        left_dets = np.zeros((int(np.ceil(len(left_keypoints) / self.sparsity)), 5), dtype=np.float32)
+        right_dets = np.zeros((int(np.ceil(len(right_keypoints) / self.sparsity)), 5), dtype=np.float32)
 
         # save as (x1, y1, x2, y2)
         idx = 0
-        for i in range(0, len(left_keypoints), self.sparse):
+        for i in range(0, len(left_keypoints), self.sparsity):
             radius = left_keypoints[idx].size / 2.
             left_dets[idx, 0] = np.maximum(0, left_keypoints[i].pt[0] - radius)
             left_dets[idx, 1] = np.maximum(0, left_keypoints[i].pt[1] - radius)
@@ -140,7 +140,7 @@ class Detector(object):
             idx += 1
 
         idx = 0
-        for i in range(0, len(right_keypoints), self.sparse):
+        for i in range(0, len(right_keypoints), self.sparsity):
             radius = right_keypoints[idx].size / 2.
             right_dets[idx, 0] = np.maximum(0, right_keypoints[i].pt[0] - radius)
             right_dets[idx, 1] = np.maximum(0, right_keypoints[i].pt[1] - radius)
