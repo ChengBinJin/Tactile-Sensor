@@ -1,5 +1,6 @@
 import cv2
 import argparse
+import numpy as np
 
 import utils as utils
 from sgbm import SGBM
@@ -11,7 +12,7 @@ parser.add_argument('--video_record', dest='video_record', action='store_true', 
                     help='record raw video or not')
 parser.add_argument('--result_record', dest='result_record', action='store_true', default=False,
                     help='record result video or not')
-parser.add_argument('--use_tracker', dest='use_tracker', action='store_true', default=False,
+parser.add_argument('--tracker', dest='tracker', action='store_true', default=False,
                     help='use tracker or not')
 parser.add_argument('--sparsity', dest='sparsity', type=int, default=1, help='tracker sparsity for acceleration')
 parser.add_argument('--input_video', dest='input_video', type=str, default='./videos/20180716-1733.avi',
@@ -33,21 +34,22 @@ def main():
 
     frame_idx = 0
     while True:
-        # read fraems
-        left_img, right_img = reader.next_frame()
-        if (left_img is None) or (right_img is None):
-            break
+        if np.mod(frame_idx, 2) == 0:
+            # read fraems
+            left_img, right_img = reader.next_frame()
+            if (left_img is None) or (right_img is None):
+                break
 
-        # blob detection
-        det_results = detector(left_img, right_img)
-        imgs = [left_img, right_img, det_results['left_blob'], det_results['right_blob']]
+            # blob detection
+            det_results = detector(left_img, right_img)
+            imgs = [left_img, right_img, det_results['left_blob'], det_results['right_blob']]
 
-        # show restuls
-        utils.show_stereo(imgs, args, video_writer, blob_writer)
-        utils.show_disparity(stereo, args, det_results, disp_writer)
+            # show restuls
+            utils.show_stereo(imgs, args, video_writer, blob_writer)
+            utils.show_disparity(stereo, args, det_results, disp_writer)
 
-        if cv2.waitKey(args.interval_time) & 0xFF == 27:
-            break
+            if cv2.waitKey(args.interval_time) & 0xFF == 27:
+                break
 
         print('frame idx: {}'.format(frame_idx))
         frame_idx += 1

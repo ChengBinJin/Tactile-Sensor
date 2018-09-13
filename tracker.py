@@ -37,9 +37,9 @@ def convert_x_to_bbox(x, sccore=None):
 
 
 class KalmanBoxTracker(object):
-    count = 0
+    # count = 0
 
-    def __init__(self, bbox):
+    def __init__(self, bbox, min_hits, count=0):
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
         self.kf.F = np.array(
             [[1, 0, 0, 0, 1, 0, 0],
@@ -63,12 +63,15 @@ class KalmanBoxTracker(object):
 
         self.kf.x[:4] = convert_bbox_to_z(bbox)
         self.time_since_update = 0
-        self.id = KalmanBoxTracker.count
-        KalmanBoxTracker.count += 1
+        # self.id = KalmanBoxTracker.count
+        self.id = count
+        # KalmanBoxTracker.count += 1
         self.history = []
         self.hits = 0
         self.hit_streak = 0
         self.age = 0
+        self.vip = False
+        self.min_hits = min_hits
 
     def update(self, bbox):
         self.time_since_update = 0
@@ -76,6 +79,9 @@ class KalmanBoxTracker(object):
         self.hits += 1
         self.hit_streak += 1
         self.kf.update(convert_bbox_to_z(bbox))
+
+        if self.hit_streak >= self.min_hits:
+            self.vip = True
 
     def predict(self):
         if (self.kf.x[6] + self.kf.x[2]) <= 0:
@@ -94,7 +100,7 @@ class KalmanBoxTracker(object):
         return convert_x_to_bbox(self.kf.x)
 
 
-def associate_detections_to_trackers(detections, trackers, iou_threshold=0.5):
+def associate_detections_to_trackers(detections, trackers, iou_threshold=0.2):
     if len(trackers) == 0:
         return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
 
@@ -141,6 +147,7 @@ class Tracker(object):
         self.det_confidence = det_confidence
         self.trackers = []
         self.frame_count = 0
+        self.kalman_count = 0
 
     def update(self, dets):
         self.frame_count += 1
@@ -172,14 +179,14 @@ class Tracker(object):
                 trk.update(dets[d, :][0])
 
         for i in unmateched_dets:
-            trk = KalmanBoxTracker(dets[i, :])
+            trk = KalmanBoxTracker(dets[i, :], min_hits=self.min_hits, count=self.kalman_count)
+            self.kalman_count += 1
             self.trackers.append(trk)
 
         i = len(self.trackers)
         for trk in reversed(self.trackers):
             d = trk.get_state()[0]
-            if (trk.time_since_update < self.max_age) and \
-                    (trk.hit_streak >= self.min_hits or self.frame_count <= self.min_hits):
+            if (trk.time_since_update < self.max_age) and ((trk.hit_streak >= self.min_hits) or trk.vip):
                 ret1.append(np.concatenate((d, [trk.id+1])).reshape(1, -1))
             i -= 1
 

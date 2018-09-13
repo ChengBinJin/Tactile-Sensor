@@ -9,13 +9,16 @@ class Detector(object):
     def __init__(self, args):
         self.args = args
         self.mask_writer = RecordVideo(self.args.result_record, vname='mask')
-        self.left_tracker = Tracker()
-        self.right_tracker = Tracker()
+        self.left_tracker = Tracker(max_age=20, min_hits=5)
+        self.right_tracker = Tracker(max_age=20, min_hits=5)
         self.sparsity = self.args.sparsity  # accelerate tracking
 
         self.red = (0, 0, 255)
         self.white = (255, 255, 255)
-        self.radius = 5
+        self.aqua = (255, 255, 0)
+        self.myFont = 2
+        self.myScale = 0.5
+        self.radius_factor = 1.2
         self.threshold = 127.5
         self.kernel = np.ones((5, 5), np.uint8)
         self.width, self.height, self.channel = 640, 480, 3
@@ -76,33 +79,40 @@ class Detector(object):
         left_blob = np.dstack((left_thres, left_thres, left_thres))
         right_blob = np.dstack((right_thres, right_thres, right_thres))
 
-        if self.args.use_tracker:
+        if self.args.tracker:
             # kalman filter with hungarian data association
             left_dets, right_dets = self.list_to_array(left_keypoints, right_keypoints)
             left_tracks = self.left_tracker.update(left_dets)
             right_tracks = self.right_tracker.update(right_dets)
+            # print('left_tracks 4th dim value: {}'.format(left_tracks[:, 4]))
 
             for idx in range(left_tracks.shape[0]):
                 col = int((left_tracks[idx, 0] + left_tracks[idx, 2]) / 2.)
                 row = int((left_tracks[idx, 1] + left_tracks[idx, 3]) / 2.)
-                radius = int((left_tracks[idx, 2] - left_tracks[idx, 0]) / 2.)
-                cv2.circle(left_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                radius = int(self.radius_factor * (left_tracks[idx, 2] - left_tracks[idx, 0]) / 2.)
+                id_ = str(int(left_tracks[idx, 4]))
+                cv2.circle(left_blob, (col, row), radius, color=self.aqua, thickness=-1)
+                left_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
+                cv2.putText(left_blob, id_, (col, row), fontFace=self.myFont, fontScale=self.myScale, color=self.red)
             for idx in range(right_tracks.shape[0]):
                 col = int((right_tracks[idx, 0] + right_tracks[idx, 2]) / 2.)
                 row = int((right_tracks[idx, 1] + right_tracks[idx, 3]) / 2.)
-                radius = int((right_tracks[idx, 2] - right_tracks[idx, 0]) / 2.)
-                cv2.circle(right_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                radius = int(self.radius_factor * (right_tracks[idx, 2] - right_tracks[idx, 0]) / 2.)
+                id_ = str(int(right_tracks[idx, 4]))
+                cv2.circle(right_blob, (col, row), radius, color=self.aqua, thickness=-1)
+                right_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
+                cv2.putText(right_blob, id_, (col, row), fontFace=self.myFont, fontScale=self.myScale, color=self.red)
         else:
             # add keypoints' center and draw circle
             for idx in range(len(left_keypoints)):
                 col, row = int(left_keypoints[idx].pt[0]), int(left_keypoints[idx].pt[1])
-                radius = int(left_keypoints[idx].size / 2)
-                cv2.circle(left_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                radius = int(self.radius_factor * left_keypoints[idx].size / 2)
+                cv2.circle(left_blob, (col, row), radius, color=self.aqua, thickness=-1)
                 left_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
             for idx in range(len(right_keypoints)):
                 col, row = int(right_keypoints[idx].pt[0]), int(right_keypoints[idx].pt[1])
-                radius = int(right_keypoints[idx].size / 2)
-                cv2.circle(right_blob, (col, row), radius, color=(255, 0, 0), thickness=-1)
+                radius = int(self.radius_factor * right_keypoints[idx].size / 2)
+                cv2.circle(right_blob, (col, row), radius, color=self.aqua, thickness=-1)
                 right_blob[row - 1:row + 1, col - 1:col + 1, :] = [0, 0, 255]
 
         det_results['left_blob'], det_results['right_blob'] = left_blob, right_blob
