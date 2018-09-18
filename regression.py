@@ -6,46 +6,57 @@ from sklearn.model_selection import train_test_split
 class DataLoader(object):
     def __init__(self, path, extension='bmp'):
         self.paths = all_files_under(path, extension=extension)
-        self.num_trains, self.num_vals = 0, 0
-
-        self.seed = 123
-        self.percentage = 0.2
+        self.seed = 123  # random seed to fix random split train and validation data
+        self.percentage = 0.2  # percentage used for validation data
+        self.num_attributes = 7  # number of attributes for data
         self.train_paths, self.val_paths = [], []
-        self.train_x, self.train_y, self.train_z, self.train_ra, self.train_rb, self.train_f, self.train_d = \
-            [], [], [], [], [], [], []
-        self.val_x, self.val_y, self.val_z, self.val_ra, self.val_rb, self.val_f, self.val_d = \
-            [], [], [], [], [], [], []
 
-        self.split_train_val()
-        self.read_parameters()
+        self._split_train_val()
+        self._read_parameters()
+        self._calculate_min_max_normalize()
 
-    def read_parameters(self):
+    def _calculate_min_max_normalize(self):
+        self.min_train = np.amin(self.train_data, axis=0)
+        self.max_train = np.amax(self.train_data, axis=0)
+        self.eps = 1e-12
+
+        print('Minimum of traininig data: {}'.format(self.min_train))
+        print('Maximum of training data: {}'.format(self.max_train))
+
+        # normalize to [0, 1]
+        self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
+
+    def _read_parameters(self):
         for idx in range(len(self.train_paths)):
             path = self.train_paths[idx]
-            self.train_x.append(float(path[path.find('_X')+2:path.find('_Y')]))
-            self.train_y.append(float(path[path.find('_Y')+2:path.find('_Z')]))
-            self.train_z.append(float(path[path.find('_Z')+2:path.find('_Ra')]))
-            self.train_ra.append(float(path[path.find('_Ra')+3:path.find('_Rb')]))
-            self.train_rb.append(float(path[path.find('_Rb')+3:path.find('_F')]))
-            self.train_f.append(float(path[path.find('_F')+2:path.find('_D')]))
-            self.train_d.append(float(path[path.find('_D')+2:path.find('.bmp')]))
+            self.train_data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
+            self.train_data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
+            self.train_data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
+            self.train_data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
+            self.train_data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
+            self.train_data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
+            self.train_data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
 
         for idx in range(len(self.val_paths)):
             path = self.val_paths[idx]
-            self.val_x.append(float(path[path.find('_X')+2:path.find('_Y')]))
-            self.val_y.append(float(path[path.find('_Y')+2:path.find('_Z')]))
-            self.val_z.append(float(path[path.find('_Z')+2:path.find('_Ra')]))
-            self.val_ra.append(float(path[path.find('_Ra')+3:path.find('_Rb')]))
-            self.val_rb.append(float(path[path.find('_Rb')+3:path.find('_F')]))
-            self.val_f.append(float(path[path.find('_F')+2:path.find('_D')]))
-            self.val_d.append(float(path[path.find('_D')+2:path.find('.bmp')]))
+            self.val_data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
+            self.val_data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
+            self.val_data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
+            self.val_data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
+            self.val_data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
+            self.val_data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
+            self.val_data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
 
-    def split_train_val(self):
+    def _split_train_val(self):
         self.train_paths, self.val_paths = train_test_split(self.paths, test_size=self.percentage,
                                                             random_state=self.seed, shuffle=True)
 
         self.num_trains = len(self.train_paths)
         self.num_vals = len(self.val_paths)
+
+        self.train_data = np.zeros((self.num_trains, self.num_attributes), dtype=np.float32)
+        self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
+
         print('num train_paths: {}'.format(self.num_trains))
         print('num val_paths: {}'.format(self.num_vals))
 
@@ -71,18 +82,18 @@ def all_files_under(path, extension=None, append_path=True, sort=True):
 def main(path):
     data_loader = DataLoader(path)
 
-    random_test = np.random.randint(low=0, high=data_loader.num_vals, size=10)
-
-    for idx in random_test:
-        print(idx)
-        print('sample data: {}'.format(data_loader.val_paths[idx]))
-        print('X: {}'.format(data_loader.val_x[idx]))
-        print('Y: {}'.format(data_loader.val_y[idx]))
-        print('Z: {}'.format(data_loader.val_z[idx]))
-        print('Ra: {}'.format(data_loader.val_ra[idx]))
-        print('Rb: {}'.format(data_loader.val_rb[idx]))
-        print('F: {}'.format(data_loader.val_f[idx]))
-        print('D: {}'.format(data_loader.val_d[idx]))
+    # random_test = np.random.randint(low=0, high=data_loader.num_vals, size=10)
+    #
+    # for idx in random_test:
+    #     print(idx)
+    #     print('sample data: {}'.format(data_loader.val_paths[idx]))
+    #     print('X: {}'.format(data_loader.val_data[idx, 0]))
+    #     print('Y: {}'.format(data_loader.val_data[idx, 1]))
+    #     print('Z: {}'.format(data_loader.val_data[idx, 2]))
+    #     print('Ra: {}'.format(data_loader.val_data[idx, 3]))
+    #     print('Rb: {}'.format(data_loader.val_data[idx, 4]))
+    #     print('F: {}'.format(data_loader.val_data[idx, 5]))
+    #     print('D: {}'.format(data_loader.val_data[idx, 6]))
 
 
 if __name__ == '__main__':
