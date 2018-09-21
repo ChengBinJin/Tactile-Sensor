@@ -20,9 +20,6 @@ class DataLoader(object):
         self.max_train = np.amax(self.train_data, axis=0)
         self.eps = 1e-12
 
-        print('Minimum of traininig data: {}'.format(self.min_train))
-        print('Maximum of training data: {}'.format(self.max_train))
-
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
