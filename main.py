@@ -11,7 +11,7 @@ from solver import Solver
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
-tf.flags.DEFINE_integer('batch_size', 256, 'batch size, default: 256')
+tf.flags.DEFINE_integer('batch_size', 8, 'batch size, default: 256')
 tf.flags.DEFINE_string('dataset', '20180908_xy', 'dataset name, default: 20180908_xy')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 

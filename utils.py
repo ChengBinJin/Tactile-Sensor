@@ -1,4 +1,6 @@
+import os
 import cv2
+import scipy.misc
 import numpy as np
 from datetime import datetime
 
@@ -113,3 +115,46 @@ def create_record_canvas(h, w, real_disparity, norm_disparity, mask):
 
     return np.dstack((canvas, canvas, canvas))  # video write just save 3 channel frame
 
+
+def all_files_under(path, extension=None, append_path=True, sort=True):
+    if append_path:
+        if extension is None:
+            filenames = [os.path.join(path, fname) for fname in os.listdir(path)]
+        else:
+            filenames = [os.path.join(path, fname) for fname in os.listdir(path) if fname.endswith(extension)]
+    else:
+        if extension is None:
+            filenames = [os.path.basename(fname) for fname in os.listdir(path)]
+        else:
+            filenames = [os.path.basename(fname) for fname in os.listdir(path) if fname.endswith(extension)]
+
+    if sort:
+        filenames = sorted(filenames)
+
+    return filenames
+
+
+def load_data(img_path, img_size, is_gray_scale=False):
+    img = load_image(img_path=img_path, img_size=img_size, is_gray_scale=is_gray_scale)
+    img = img / 127.5 - 1.0
+
+    # hope output should be [h, w, c]
+    if img.ndim == 2:
+        img = np.expand_dims(img, axis=2)
+
+    return img
+
+
+def load_image(img_path, img_size, is_gray_scale=False):
+    if is_gray_scale:
+        img = scipy.misc.imread(img_path, flatten=True).astype(np.float)
+    else:
+        img = scipy.misc.imread(img_path, mode='RGB').astype(np.float)
+
+        if not (img.ndim == 3 and img.shape[2] == 3):
+            img = np.dstack((img, img, img))
+
+    if img_size is not None:
+        img = scipy.misc.imresize(img, img_size)
+
+    return img

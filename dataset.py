@@ -1,11 +1,22 @@
+# ---------------------------------------------------------
+# Tactile Sensor Project
+# Licensed under The MIT License [see LICENSE for details]
+# Written by Cheng-Bin Jin
+# Email: sbkim0407@gmail.com
+# ---------------------------------------------------------
 import os
+import cv2
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+import utils as utils
+
 
 class DataLoader(object):
-    def __init__(self, path, extension='bmp'):
-        self.paths = all_files_under(path, extension=extension)
+    def __init__(self, flags, path, extension='bmp'):
+        self.flags = flags
+        self.img_size = (480, 640, 3)
+        self.paths = utils.all_files_under(os.path.join('data', path), extension=extension)
         self.seed = 123  # random seed to fix random split train and validation data
         self.percentage = 0.2  # percentage used for validation data
         self.num_attributes = 7  # number of attributes for data
@@ -57,40 +68,51 @@ class DataLoader(object):
         print('num train_paths: {}'.format(self.num_trains))
         print('num val_paths: {}'.format(self.num_vals))
 
+    def next_batch(self):
+        imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
+        imgs = [utils.load_data(self.train_paths[idx], img_size=self.img_size) for idx in imgs_idx]
+        imgs = np.asarray(imgs).astype(np.float32)
 
-def all_files_under(path, extension=None, append_path=True, sort=True):
-    if append_path:
-        if extension is None:
-            filenames = [os.path.join(path, fname) for fname in os.listdir(path)]
-        else:
-            filenames = [os.path.join(path, fname) for fname in os.listdir(path) if fname.endswith(extension)]
-    else:
-        if extension is None:
-            filenames = [os.path.basename(fname) for fname in os.listdir(path)]
-        else:
-            filenames = [os.path.basename(fname) for fname in os.listdir(path) if fname.endswith(extension)]
+        return imgs
 
-    if sort:
-        filenames = sorted(filenames)
+    def test_read_img(self):
+        imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
+        imgs = [utils.load_data(self.train_paths[idx], img_size=self.img_size) for idx in imgs_idx]
+        imgs = np.asarray(imgs).astype(np.float32)
 
-    return filenames
+        for idx, img_idx in enumerate(imgs_idx):
+            img = imgs[idx]
+            img = img[:, :, ::-1]  # RGB to BGR
+            img = img + 1. / 2.  # from [-1., 1.] to [0., 1.]
+
+            print('sample data: {}'.format(self.train_paths[img_idx]))
+            print('X: {}'.format(self.train_data[img_idx, 0]))
+            print('Y: {}'.format(self.train_data[img_idx, 1]))
+            print('Z: {}'.format(self.train_data[img_idx, 2]))
+            print('Ra: {}'.format(self.train_data[img_idx, 3]))
+            print('Rb: {}'.format(self.train_data[img_idx, 4]))
+            print('F: {}'.format(self.train_data[img_idx, 5]))
+            print('D: {}\n'.format(self.train_data[img_idx, 6]))
+
+            cv2.imshow('Image', img)
+            cv2.waitKey(0)
 
 
 def main(path):
-    data_loader = DataLoader(path)
+    data_loader = DataLoader(None, path)
 
-    # random_test = np.random.randint(low=0, high=data_loader.num_vals, size=10)
-    #
-    # for idx in random_test:
-    #     print(idx)
-    #     print('sample data: {}'.format(data_loader.val_paths[idx]))
-    #     print('X: {}'.format(data_loader.val_data[idx, 0]))
-    #     print('Y: {}'.format(data_loader.val_data[idx, 1]))
-    #     print('Z: {}'.format(data_loader.val_data[idx, 2]))
-    #     print('Ra: {}'.format(data_loader.val_data[idx, 3]))
-    #     print('Rb: {}'.format(data_loader.val_data[idx, 4]))
-    #     print('F: {}'.format(data_loader.val_data[idx, 5]))
-    #     print('D: {}'.format(data_loader.val_data[idx, 6]))
+    random_test = np.random.randint(low=0, high=data_loader.num_vals, size=10)
+
+    for idx in random_test:
+        print(idx)
+        print('sample data: {}'.format(data_loader.val_paths[idx]))
+        print('X: {}'.format(data_loader.val_data[idx, 0]))
+        print('Y: {}'.format(data_loader.val_data[idx, 1]))
+        print('Z: {}'.format(data_loader.val_data[idx, 2]))
+        print('Ra: {}'.format(data_loader.val_data[idx, 3]))
+        print('Rb: {}'.format(data_loader.val_data[idx, 4]))
+        print('F: {}'.format(data_loader.val_data[idx, 5]))
+        print('D: {}'.format(data_loader.val_data[idx, 6]))
 
 
 if __name__ == '__main__':
