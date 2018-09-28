@@ -15,7 +15,7 @@ import utils as utils
 class DataLoader(object):
     def __init__(self, flags, path, extension='bmp'):
         self.flags = flags
-        self.img_size = (480, 640, 3)
+        self.img_size = (int(480 * self.flags.resize_ratio), int(640 * self.flags.resize_ratio), 3)
         self.paths = utils.all_files_under(os.path.join('data', path), extension=extension)
         self.seed = 123  # random seed to fix random split train and validation data
         self.percentage = 0.2  # percentage used for validation data
@@ -73,7 +73,15 @@ class DataLoader(object):
         imgs = [utils.load_data(self.train_paths[idx], img_size=self.img_size) for idx in imgs_idx]
         imgs = np.asarray(imgs).astype(np.float32)
 
-        return imgs
+        gt = []
+        for idx, img_idx in enumerate(imgs_idx):
+            item = np.zeros(2, dtype=np.float32)
+            item[0] = self.norm_train_data[img_idx, 0]
+            item[1] = self.norm_train_data[img_idx, 1]
+            gt.append(item)
+        gt_arr = np.asarray(gt)
+
+        return imgs, gt_arr
 
     def test_read_img(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
@@ -93,6 +101,9 @@ class DataLoader(object):
             print('Rb: {}'.format(self.train_data[img_idx, 4]))
             print('F: {}'.format(self.train_data[img_idx, 5]))
             print('D: {}\n'.format(self.train_data[img_idx, 6]))
+
+            print('Norm X: {}'.format(self.norm_train_data[img_idx, 0]))
+            print('Norm Y: {}'.format(self.norm_train_data[img_idx, 1]))
 
             cv2.imshow('Image', img)
             cv2.waitKey(0)

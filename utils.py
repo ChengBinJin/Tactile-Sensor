@@ -1,4 +1,5 @@
 import os
+import sys
 import cv2
 import scipy.misc
 import numpy as np
@@ -158,3 +159,11 @@ def load_image(img_path, img_size, is_gray_scale=False):
         img = scipy.misc.imresize(img, img_size)
 
     return img
+
+
+def print_metrics(itr, kargs):
+    print("*** Iteration {}  ====> ".format(itr))
+    for name, value in kargs.items():
+        print("{} : {}, ".format(name, value))
+    print("")
+    sys.stdout.flush()
