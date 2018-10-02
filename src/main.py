@@ -22,7 +22,7 @@ tf.flags.DEFINE_float('weight_decay', 1e-5, 'hyper-parameter for regularization 
 
 tf.flags.DEFINE_integer('iters', 200, 'number of iterations, default: 100000')
 tf.flags.DEFINE_integer('print_freq', 5, 'print frequency for loss, default: 100')
-tf.flags.DEFINE_integer('save_freq', 10, 'save frequency for model, default: 10000')
+tf.flags.DEFINE_integer('save_freq', 100, 'save frequency for model, default: 10000')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model taht you wish to continue training '
                        '(e.g. 20180907-1739), default: None')
 

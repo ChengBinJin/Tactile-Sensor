@@ -1,0 +1,9 @@
+.idea/
+__pycache__/
+data/
+models/
+src/20180908_xy/
+src/.idea/
+src/__pycache__/
+src/videos/
+src/img/

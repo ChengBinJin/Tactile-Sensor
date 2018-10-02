@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import numpy as np
 import tensorflow as tf
 from datetime import datetime
 
@@ -59,20 +60,26 @@ class Solver(object):
 
         while self.iter_time < self.flags.iters:
             imgs, gts = self.dataset.next_batch()
-            # print('imgs shape: {}'.format(imgs.shape))
-            # print('gts shape: {}'.format(gts.shape)
 
             loss, summary = self.model.train_step(imgs, gts)
             self.model.print_info(loss, self.iter_time)
             self.train_writer.add_summary(summary, self.iter_time)
             self.train_writer.flush()
 
+            # save model
+            self.save_model(self.iter_time)
             self.iter_time += 1
 
         # self.dataset.test_read_img()
 
     def test(self):
         print('Hello test!')
+
+    def save_model(self, iter_time):
+        if np.mod(iter_time + 1, self.flags.save_freq) == 0:
+            model_name = 'model'
+            self.saver.save(self.sess, os.path.join(self.model_out_dir, model_name), global_step=iter_time)
+            print('[*] Model saved!')
 
     def load_model(self):
         print(' [*] Reading checkpoint...')

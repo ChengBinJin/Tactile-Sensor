@@ -16,7 +16,7 @@ class DataLoader(object):
     def __init__(self, flags, path, extension='bmp'):
         self.flags = flags
         self.img_size = (int(480 * self.flags.resize_ratio), int(640 * self.flags.resize_ratio), 3)
-        self.paths = utils.all_files_under(os.path.join('data', path), extension=extension)
+        self.paths = utils.all_files_under(os.path.join('../data', path), extension=extension)
         self.seed = 123  # random seed to fix random split train and validation data
         self.percentage = 0.2  # percentage used for validation data
         self.num_attributes = 7  # number of attributes for data

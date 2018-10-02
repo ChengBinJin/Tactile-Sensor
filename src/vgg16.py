@@ -24,7 +24,7 @@ class VGG16_TL:
         # hyper_parameters
         self.hidden = 4096
 
-        weight_file_path = './models/caffe_layers_value.pickle'
+        weight_file_path = '../models/caffe_layers_value.pickle'
         with open(weight_file_path, 'rb') as f:
             self.pretrained_weights = cpickle.load(f, encoding='latin1')
 
