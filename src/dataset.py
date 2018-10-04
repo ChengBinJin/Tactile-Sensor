@@ -34,6 +34,13 @@ class DataLoader(object):
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
+        print('min_train: {}'.format(self.min_train))
+        print('max_train: {}'.format(self.max_train))
+
+    def un_normalize(self, preds):
+        preds = preds * (self.max_train[0:2] - self.min_train[0:2] + self.eps) + self.min_train[0:2]
+        return preds
+
     def _read_parameters(self):
         for idx in range(len(self.train_paths)):
             path = self.train_paths[idx]
@@ -76,8 +83,23 @@ class DataLoader(object):
         gt = []
         for idx, img_idx in enumerate(imgs_idx):
             item = np.zeros(2, dtype=np.float32)
-            item[0] = self.norm_train_data[img_idx, 0]
-            item[1] = self.norm_train_data[img_idx, 1]
+            item[0] = self.train_data[img_idx, 0]
+            item[1] = self.train_data[img_idx, 1]
+            gt.append(item)
+        gt_arr = np.asarray(gt)
+
+        return imgs, gt_arr
+
+    def next_batch_val(self):
+        imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
+        imgs = [utils.load_data(self.val_paths[idx], img_size=self.img_size) for idx in imgs_idx]
+        imgs = np.asarray(imgs).astype(np.float32)
+
+        gt = []
+        for idx, img_idx in enumerate(imgs_idx):
+            item = np.zeros(2, dtype=np.float32)
+            item[0] = self.val_data[img_idx, 0]
+            item[1] = self.val_data[img_idx, 1]
             gt.append(item)
         gt_arr = np.asarray(gt)
 

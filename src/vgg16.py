@@ -8,11 +8,13 @@ import tensorflow_utils as tf_utils
 import utils as utils
 
 
+# noinspection PyPep8Naming
 class VGG16_TL:
-    def __init__(self, sess, flags, img_size):
+    def __init__(self, sess, flags, dataset):
         self.sess = sess
         self.flags = flags
-        self.img_size = img_size
+        self.dataset = dataset
+        self.img_size = self.dataset.img_size
         print('self.img_size: {}'.format(self.img_size))
 
         self.num_regress = self.flags.num_regress
@@ -123,7 +125,7 @@ class VGG16_TL:
 
         return [total_loss, data_loss, reg_term], summary
 
-    def test_step(self, imgs):
+    def test_step(self, imgs, gts):
         feed_dict = {self.input_img: imgs, self.is_train: False, self.keep_prob: 1.0}
         preds = self.sess.run(self.predicts, feed_dict=feed_dict)
 

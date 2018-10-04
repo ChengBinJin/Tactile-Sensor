@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from datetime import datetime
 
-
+import plot as plot
 from dataset import DataLoader
 from vgg16 import VGG16_TL
 
@@ -22,7 +22,7 @@ class Solver(object):
 
         self.flags = flags
         self.dataset = DataLoader(self.flags, path=self.flags.dataset)
-        self.model = VGG16_TL(self.sess, self.flags, self.dataset.img_size)
+        self.model = VGG16_TL(self.sess, self.flags, self.dataset)
 
         self._make_folders()
         self.iter_time = 0
@@ -59,6 +59,8 @@ class Solver(object):
                 print('[! Load Failed...\n')
 
         while self.iter_time < self.flags.iters:
+            self.eval(self.iter_time)  # evaluate the
+
             imgs, gts = self.dataset.next_batch()
 
             loss, summary = self.model.train_step(imgs, gts)
@@ -74,6 +76,19 @@ class Solver(object):
 
     def test(self):
         print('Hello test!')
+
+    def eval(self, iter_time):
+        if np.mod(iter_time, self.flags.eval_freq) == 0:
+            imgs, gts = self.dataset.next_batch_val()                   # sample val data
+            preds = self.model.test_step(imgs, gts)                     # predict
+            unnorm_preds = self.dataset.un_normalize(preds)             # un-normalize predicts
+
+            error = np.mean(np.sqrt(np.square(preds - unnorm_preds)))   # calucate error rate
+            print('error: {}'.format(error))
+
+            plot.plot('error', error)  # plot error
+            plot.flush()
+            plot.tick()
 
     def save_model(self, iter_time):
         if np.mod(iter_time + 1, self.flags.save_freq) == 0:
