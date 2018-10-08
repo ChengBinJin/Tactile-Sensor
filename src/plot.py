@@ -1,3 +1,4 @@
+import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ def plot(name, value):
     _since_last_flush[name][_iter[0]] = value
 
 
-def flush():
+def flush(save_folder):
     prints = []
     for name, vals in _since_last_flush.items():
         sum_ = 0
@@ -37,7 +38,7 @@ def flush():
         plt.plot(x_vals, y_vals)
         plt.xlabel('iteration')
         plt.ylabel(name)
-        plt.savefig(name.replace(' ', '_')+'.jpg')
+        plt.savefig(os.path.join(save_folder, name.replace(' ', '_')+'.jpg'))
 
     # print("iter {}\t{}".format(_iter[0], "\t".join(prints)))
     _since_last_flush.clear()

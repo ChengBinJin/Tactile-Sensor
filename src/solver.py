@@ -80,14 +80,16 @@ class Solver(object):
     def eval(self, iter_time):
         if np.mod(iter_time, self.flags.eval_freq) == 0:
             imgs, gts = self.dataset.next_batch_val()                   # sample val data
-            preds = self.model.test_step(imgs, gts)                     # predict
-            unnorm_preds = self.dataset.un_normalize(preds)             # un-normalize predicts
+            preds = self.model.test_step(imgs)                          # predict
+            # unnorm_preds = self.dataset.un_normalize(preds)           # un-normalize predicts
 
-            error = np.mean(np.sqrt(np.square(preds - unnorm_preds)))   # calucate error rate
+            error = np.mean(np.sqrt(np.square(preds - preds)))   # calucate error rate
             print('error: {}'.format(error))
+            print('gt: {}'.format(gts[0]))
+            print('preds: {}'.format(preds[0]))
 
             plot.plot('error', error)  # plot error
-            plot.flush()
+            plot.flush(self.model_out_dir)
             plot.tick()
 
     def save_model(self, iter_time):

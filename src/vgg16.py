@@ -102,17 +102,17 @@ class VGG16_TL:
             fc6 = tf_utils.linear(fc, self.hidden, name='fc6')
             # fc6 = tf_utils.norm(fc6, name='fc6_norm', _type='batch', _ops=self._extra_train_ops, is_train=mode)
             fc6 = tf_utils.relu(fc6)
-            fc6 = tf.nn.dropout(fc6, keep_prob, name='fc6_dropout')
+            # fc6 = tf.nn.dropout(fc6, keep_prob, name='fc6_dropout')
             tf_utils.print_activations(fc6)
 
             fc7 = self.fc_layer(fc6, 'fc7')
             # fc7 = tf_utils.norm(fc7, name='fc7_norm', _type='batch', _ops=self._extra_train_ops, is_train=mode)
             fc7 = tf_utils.relu(fc7)
-            fc7 = tf.nn.dropout(fc7, keep_prob, name='fc6_dropout')
+            # fc7 = tf.nn.dropout(fc7, keep_prob, name='fc6_dropout')
             tf_utils.print_activations(fc7)
 
             logits = tf_utils.linear(fc7, self.num_regress, name='fc8')
-            logits = tf_utils.tanh(logits)
+            # logits = tf_utils.tanh(logits)
             tf_utils.print_activations(logits)
 
             return logits
@@ -125,7 +125,7 @@ class VGG16_TL:
 
         return [total_loss, data_loss, reg_term], summary
 
-    def test_step(self, imgs, gts):
+    def test_step(self, imgs):
         feed_dict = {self.input_img: imgs, self.is_train: False, self.keep_prob: 1.0}
         preds = self.sess.run(self.predicts, feed_dict=feed_dict)
 
