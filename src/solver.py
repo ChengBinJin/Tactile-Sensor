@@ -41,8 +41,8 @@ class Solver(object):
                 cur_time = self.flags.load_model
                 self.model_out_dir = "{}/model/{}".format(self.flags.dataset, cur_time)
 
-            self.train_writer = tf.summary.FileWriter("{}/logs/{}".format(self.flags.dataset, cur_time),
-                                                      graph_def=self.sess.graph_def)
+            self.log_out_dir = "{}/logs/{}".format(self.flags.dataset, cur_time)
+            self.train_writer = tf.summary.FileWriter(self.log_out_dir, graph_def=self.sess.graph_def)
 
         elif not self.flags.is_train:  # test stage
             self.model_out_dir = "{}/model/{}".format(self.flags.dataset, self.flags.load_model)
@@ -62,7 +62,6 @@ class Solver(object):
             self.eval(self.iter_time)  # evaluate the
 
             imgs, gts = self.dataset.next_batch()
-
             loss, summary = self.model.train_step(imgs, gts)
             self.model.print_info(loss, self.iter_time)
             self.train_writer.add_summary(summary, self.iter_time)
@@ -81,15 +80,16 @@ class Solver(object):
         if np.mod(iter_time, self.flags.eval_freq) == 0:
             imgs, gts = self.dataset.next_batch_val()                   # sample val data
             preds = self.model.test_step(imgs)                          # predict
-            # unnorm_preds = self.dataset.un_normalize(preds)           # un-normalize predicts
+            unnorm_preds = self.dataset.un_normalize(preds)           # un-normalize predicts
 
-            error = np.mean(np.sqrt(np.square(preds - preds)))   # calucate error rate
+            error = np.mean(np.sqrt(np.square(unnorm_preds - gts)), axis=0)   # calucate error rate
             print('error: {}'.format(error))
             print('gt: {}'.format(gts[0]))
-            print('preds: {}'.format(preds[0]))
+            print('unnorm_preds: {}'.format(unnorm_preds[0]))
+            print('preds: {}\n'.format(preds[0]))
 
             plot.plot('error', error)  # plot error
-            plot.flush(self.model_out_dir)
+            plot.flush(self.log_out_dir)
             plot.tick()
 
     def save_model(self, iter_time):

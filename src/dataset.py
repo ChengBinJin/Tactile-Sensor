@@ -29,17 +29,13 @@ class DataLoader(object):
     def _calculate_min_max_normalize(self):
         self.min_train = np.amin(self.train_data, axis=0)
         self.max_train = np.amax(self.train_data, axis=0)
-        self.eps = 1e-12
+        self.eps = 1e-9
 
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
         print('min_train: {}'.format(self.min_train))
         print('max_train: {}'.format(self.max_train))
-
-    def un_normalize(self, preds):
-        preds = preds * (self.max_train[0:2] - self.min_train[0:2] + self.eps) + self.min_train[0:2]
-        return preds
 
     def _read_parameters(self):
         for idx in range(len(self.train_paths)):
@@ -68,7 +64,6 @@ class DataLoader(object):
 
         self.num_trains = len(self.train_paths)
         self.num_vals = len(self.val_paths)
-
         self.train_data = np.zeros((self.num_trains, self.num_attributes), dtype=np.float32)
         self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
 
@@ -79,14 +74,7 @@ class DataLoader(object):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
         imgs = [utils.load_data(self.train_paths[idx], img_size=self.img_size) for idx in imgs_idx]
         imgs = np.asarray(imgs).astype(np.float32)
-
-        gt = []
-        for idx, img_idx in enumerate(imgs_idx):
-            item = np.zeros(2, dtype=np.float32)
-            item[0] = self.train_data[img_idx, 0]
-            item[1] = self.train_data[img_idx, 1]
-            gt.append(item)
-        gt_arr = np.asarray(gt)
+        gt_arr = self.norm_train_data[imgs_idx].copy()
 
         return imgs, gt_arr
 
@@ -94,16 +82,13 @@ class DataLoader(object):
         imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
         imgs = [utils.load_data(self.val_paths[idx], img_size=self.img_size) for idx in imgs_idx]
         imgs = np.asarray(imgs).astype(np.float32)
-
-        gt = []
-        for idx, img_idx in enumerate(imgs_idx):
-            item = np.zeros(2, dtype=np.float32)
-            item[0] = self.val_data[img_idx, 0]
-            item[1] = self.val_data[img_idx, 1]
-            gt.append(item)
-        gt_arr = np.asarray(gt)
+        gt_arr = self.val_data[imgs_idx].copy()
 
         return imgs, gt_arr
+
+    def un_normalize(self, preds):
+        preds = preds * (self.max_train - self.min_train + self.eps) + self.min_train
+        return preds
 
     def test_read_img(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)

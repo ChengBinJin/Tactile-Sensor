@@ -17,14 +17,12 @@ class VGG16_TL:
         self.img_size = self.dataset.img_size
         print('self.img_size: {}'.format(self.img_size))
 
+        self.hidden = 4096  # hyper_parameters
+        self.first_conv = 64
         self.num_regress = self.flags.num_regress
-        self._extra_train_ops = []
-        self.keep_prob = 0.5
+
         self.start_decay_step = int(np.ceil(self.flags.iters / 2))  # for optimizer
         self.decay_steps = self.flags.iters - self.start_decay_step
-
-        # hyper_parameters
-        self.hidden = 4096
 
         weight_file_path = '../models/caffe_layers_value.pickle'
         with open(weight_file_path, 'rb') as f:
@@ -34,25 +32,24 @@ class VGG16_TL:
         self._tensorboard()
 
     def _build_model(self):
-        self.input_img = tf.placeholder(
+        self.input_img_tfph = tf.placeholder(
             tf.float32, shape=[None, self.img_size[0], self.img_size[1], self.img_size[2]], name='imgage_ph')
-        self.gt_regress = tf.placeholder(tf.float32, shape=[None, self.num_regress], name='gt_ph')
-        self.is_train = tf.placeholder(tf.bool, name='batch_mode_ph')
-        self.keep_prob = tf.placeholder(tf.float32, name='keep_prob_ph')
+        self.gt_regress_tfph = tf.placeholder(tf.float32, shape=[None, self.num_regress], name='gt_ph')
+        self.keep_prob_tfph = tf.placeholder(tf.float32, name='dropbout_ph')
 
-        self.predicts = self.network(self.input_img, self.is_train, self.keep_prob, name='vgg16')
+        # initialize graph
+        self.predicts = self.network(self.input_img_tfph, name='vgg16')
 
         # data loss
-        self.data_loss = tf.reduce_mean(tf.losses.mean_squared_error(labels=self.gt_regress, predictions=self.predicts))
+        self.data_loss = tf.reduce_mean(
+            tf.losses.mean_squared_error(labels=self.gt_regress_tfph, predictions=self.predicts))
         # regularization term
         self.reg_term = self.flags.weight_decay * tf.reduce_sum(
             [tf.nn.l2_loss(weight) for weight in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)])
         # total loss
         self.total_loss = self.data_loss + self.reg_term
 
-        optim_op = self.optimizer(loss=self.total_loss)
-        train_ops = [optim_op] + self._extra_train_ops
-        self.train_ops = tf.group(*train_ops)
+        self.train_ops = self.optimizer(loss=self.total_loss)
 
     def _tensorboard(self):
         tf.summary.scalar('loss/reg_term', self.reg_term)
@@ -60,73 +57,74 @@ class VGG16_TL:
         tf.summary.scalar('loss/toal_loss', self.total_loss)
         self.summary_op = tf.summary.merge_all()
 
-    def network(self, img, mode, keep_prob, name):
+    def network(self, img, name):
         with tf.variable_scope(name):
             # conv1
-            relu1_1 = self.conv_layer(img, 'conv1_1', mode)
-            relu1_2 = self.conv_layer(relu1_1, 'conv1_2', mode)
+            # relu1_1 = self.conv_layer(img, 'conv1_1')
+            conv1_1 = tf_utils.conv2d(img, self.first_conv, k_h=3, k_w=3, d_h=1, d_w=1, name='cvon1_1')
+            relu1_1 = tf_utils.relu(conv1_1, name='relu1_1')
+            relu1_2 = self.conv_layer(relu1_1, 'conv1_2')
             pool_1 = tf_utils.max_pool_2x2(relu1_2, name='max_pool_1')
             tf_utils.print_activations(pool_1)
 
             # conv2
-            relu2_1 = self.conv_layer(pool_1, 'conv2_1', mode)
-            relu2_2 = self.conv_layer(relu2_1, 'conv2_2', mode)
+            relu2_1 = self.conv_layer(pool_1, 'conv2_1')
+            relu2_2 = self.conv_layer(relu2_1, 'conv2_2')
             pool_2 = tf_utils.max_pool_2x2(relu2_2, name='max_pool_2')
             tf_utils.print_activations(pool_2)
 
             # conv3
-            relu3_1 = self.conv_layer(pool_2, 'conv3_1', mode)
-            relu3_2 = self.conv_layer(relu3_1, 'conv3_2', mode)
-            relu3_3 = self.conv_layer(relu3_2, 'conv3_3', mode)
+            relu3_1 = self.conv_layer(pool_2, 'conv3_1')
+            relu3_2 = self.conv_layer(relu3_1, 'conv3_2')
+            relu3_3 = self.conv_layer(relu3_2, 'conv3_3')
             pool_3 = tf_utils.max_pool_2x2(relu3_3, name='max_pool_3')
             tf_utils.print_activations(pool_3)
 
             # conv4
-            relu4_1 = self.conv_layer(pool_3, 'conv4_1', mode)
-            relu4_2 = self.conv_layer(relu4_1, 'conv4_2', mode)
-            relu4_3 = self.conv_layer(relu4_2, 'conv4_3', mode)
+            relu4_1 = self.conv_layer(pool_3, 'conv4_1')
+            relu4_2 = self.conv_layer(relu4_1, 'conv4_2')
+            relu4_3 = self.conv_layer(relu4_2, 'conv4_3')
             pool_4 = tf_utils.max_pool_2x2(relu4_3, name='max_pool_4')
             tf_utils.print_activations(pool_4)
 
             # conv5
-            relu5_1 = self.conv_layer(pool_4, 'conv5_1', mode)
-            relu5_2 = self.conv_layer(relu5_1, 'conv5_2', mode)
-            relu5_3 = self.conv_layer(relu5_2, 'conv5_3', mode)
+            relu5_1 = self.conv_layer(pool_4, 'conv5_1')
+            relu5_2 = self.conv_layer(relu5_1, 'conv5_2')
+            relu5_3 = self.conv_layer(relu5_2, 'conv5_3')
             pool_5 = tf_utils.max_pool_2x2(relu5_3, name='max_pool_5')
             tf_utils.print_activations(pool_5)
 
             # flatten
-            fc = flatten(pool_5)
-            tf_utils.print_activations(fc)
+            fc5 = flatten(pool_5)
+            tf_utils.print_activations(fc5)
 
-            fc6 = tf_utils.linear(fc, self.hidden, name='fc6')
-            # fc6 = tf_utils.norm(fc6, name='fc6_norm', _type='batch', _ops=self._extra_train_ops, is_train=mode)
+            # fc1
+            fc6 = tf_utils.linear(fc5, self.hidden, name='fc6')
             fc6 = tf_utils.relu(fc6)
-            # fc6 = tf.nn.dropout(fc6, keep_prob, name='fc6_dropout')
+            fc6 = tf.nn.dropout(fc6, self.keep_prob_tfph)
             tf_utils.print_activations(fc6)
 
+            # fc2
             fc7 = self.fc_layer(fc6, 'fc7')
-            # fc7 = tf_utils.norm(fc7, name='fc7_norm', _type='batch', _ops=self._extra_train_ops, is_train=mode)
             fc7 = tf_utils.relu(fc7)
-            # fc7 = tf.nn.dropout(fc7, keep_prob, name='fc6_dropout')
+            fc7 = tf.nn.dropout(fc7, self.keep_prob_tfph)
             tf_utils.print_activations(fc7)
 
+            # fc3
             logits = tf_utils.linear(fc7, self.num_regress, name='fc8')
-            # logits = tf_utils.tanh(logits)
             tf_utils.print_activations(logits)
 
             return logits
 
     def train_step(self, imgs, gt_regress):
         ops = [self.train_ops, self.total_loss, self.data_loss, self.reg_term, self.summary_op]
-        feed_dict = {self.input_img: imgs, self.gt_regress: gt_regress, self.is_train: True, self.keep_prob: 0.5}
-
+        feed_dict = {self.input_img_tfph: imgs, self.gt_regress_tfph: gt_regress, self.keep_prob_tfph: 0.5}
         _, total_loss, data_loss, reg_term, summary = self.sess.run(ops, feed_dict=feed_dict)
 
         return [total_loss, data_loss, reg_term], summary
 
     def test_step(self, imgs):
-        feed_dict = {self.input_img: imgs, self.is_train: False, self.keep_prob: 1.0}
+        feed_dict = {self.input_img_tfph: imgs, self.keep_prob_tfph: 1.0}
         preds = self.sess.run(self.predicts, feed_dict=feed_dict)
 
         return preds
@@ -162,7 +160,7 @@ class VGG16_TL:
 
         return learn_step
 
-    def conv_layer(self, bottom, name, mode):
+    def conv_layer(self, bottom, name):
         with tf.variable_scope(name):
             w = self.get_conv_weight(name)
             b = self.get_bias(name)
@@ -172,8 +170,6 @@ class VGG16_TL:
 
             conv = tf.nn.conv2d(bottom, conv_weights, [1, 1, 1, 1], padding='SAME')
             bias = tf.nn.bias_add(conv, conv_biases)
-            # batch = tf_utils.norm(bias, name='norm', _type='batch', _ops=self._extra_train_ops, is_train=mode)
-            # relu_ = tf.nn.relu(batch)
             relu_ = tf.nn.relu(bias)
 
             tf_utils.print_activations(relu_)
