@@ -52,6 +52,9 @@ class Solver(object):
             self.test_out_dir = "results/{}_mode{}/test/{}".format(
                 self.flags.dataset, self.flags.mode, self.flags.load_model)
 
+            cur_time = self.flags.load_model
+            self.log_out_dir = "results/{}_mode{}/logs/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+
             if not os.path.isdir(self.test_out_dir):
                 os.makedirs(self.test_out_dir)
 
@@ -80,39 +83,58 @@ class Solver(object):
         # self.dataset.test_read_img()
 
     def test(self):
-        print('Hello test!')
+        if self.load_model():
+            print(' [*] Load SUCCESS!')
+        else:
+            print(' [!] Load Failed...')
+
+        self.test_eval()  # evaluation
 
     def eval(self, iter_time):
         avg_error = math.inf
         if np.mod(iter_time, self.flags.eval_freq) == 0:
-            preds_total, gts_total = [], []
+            print(' [*] Evaluate...')
             num_idxs = int(self.dataset.num_vals / self.flags.batch_size)
+            preds_total = np.zeros((num_idxs * self.flags.batch_size, self.flags.num_regress), dtype=np.float32)
+            gts_total = np.zeros((num_idxs * self.flags.batch_size, self.flags.num_regress), dtype=np.float32)
+
             for idx in range(num_idxs):
-                print('{} / {}'.format(idx+1, num_idxs))
                 imgs, gts = self.dataset.next_batch_val(idx)  # sample val data
                 preds = self.model.test_step(imgs)  # predict
-                preds_total.append(preds)
-                gts_total.append(gts)
+                preds_total[idx * self.flags.batch_size:idx * self.flags.batch_size + preds.shape[0], :] = preds
+                gts_total[idx * self.flags.batch_size:idx * self.flags.batch_size + gts.shape[0], :] = gts
 
-            preds_total = np.asarray(preds_total).reshape((-1, 7))
-            gts_total = np.asarray(gts_total).reshape((-1, 7))
-
-            # unnorm_preds = self.dataset.un_normalize(preds_total)  # un-normalize predicts
-            # error = np.mean(np.sqrt(np.square(unnorm_preds - gts_total)), axis=0)  # calucate error rate
-            # print('python error: {}'.format(error))
-
-            avg_error, summary = self.model.eval_step(preds_total, gts_total)
+            unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
+            avg_error, summary = self.model.eval_step(unnorm_preds_total, gts_total)
             self.train_writer.add_summary(summary, self.eval_time)
             self.train_writer.flush()
-
             self.eval_time += 1
 
         return avg_error
 
+    def test_eval(self):
+        print(' [*] Evaluate...')
+        preds_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
+        gts_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
+        num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
+
+        for idx in range(num_idxs):
+            print('[{}] / [{}]'.format(idx+1, num_idxs))
+            imgs, gts = self.dataset.next_batch_test(idx)  # sample test data
+            preds = self.model.test_step(imgs)  # predict
+            preds_total[idx*self.flags.batch_size:idx*self.flags.batch_size+preds.shape[0], :] = preds
+            gts_total[idx*self.flags.batch_size:idx*self.flags.batch_size+gts.shape[0], :] = gts
+
+        unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
+        errors = np.sqrt(np.square(unnorm_preds_total - gts_total))
+        print('errors shape: {}'.format(errors.shape))
+
+        # TODO: write errors to the Excel!
+
     def save_model(self, iter_time):
         model_name = 'model'
         self.saver.save(self.sess, os.path.join(self.model_out_dir, model_name), global_step=iter_time)
-        print('[*] Model saved! Avg. error: {}'.format(self.best_avg_err))
+        print('\n [*] Model saved! Avg. error: {}!\n'.format(self.best_avg_err))
 
     def load_model(self):
         print(' [*] Reading checkpoint...')
@@ -124,8 +146,7 @@ class Solver(object):
 
             meta_graph_path = ckpt.model_checkpoint_path + '.meta'
             self.iter_time = int(meta_graph_path.split('-')[-1].split('.')[0])
-
-            print('[*] Load iter_time: {}'.format(self.iter_time))
+            print(' [*] Load iter_time: {}'.format(self.iter_time))
             return True
         else:
             return False

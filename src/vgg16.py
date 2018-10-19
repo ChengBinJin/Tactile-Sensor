@@ -145,10 +145,8 @@ class VGG16_TL:
         return preds
 
     def eval_step(self, preds, gts):
-        unnorm_preds = self.dataset.un_normalize(preds)  # un-normalize predicts
-
         run_op = [self.eval_ops,  self.avg_err, self.eval_summary_op]
-        feed_dict = {self.pred_tfph: unnorm_preds, self.gt_regress_tfph: gts}
+        feed_dict = {self.pred_tfph: preds, self.gt_regress_tfph: gts}
         error, avg_error, eval_summary = self.sess.run(run_op, feed_dict=feed_dict)
 
         print('tesnorflow error: {}'.format(error))

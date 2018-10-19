@@ -18,7 +18,7 @@ class DataLoader(object):
         self.flags = flags
         self.log_path = log_path
         logging.basicConfig(filename=os.path.join(self.log_path, 'info.log'), level=logging.INFO,
-                            format='%(levelname)s:%(message)s')
+                            format='%(asctime)s:%(levelname)s:%(message)s')
 
         if (self.flags.mode == 0) or (self.flags.mode == 2):
             self.out_channel = 1
@@ -30,6 +30,10 @@ class DataLoader(object):
             os.path.join('../data', dataset_path), extension=extension, prefix='left')
         self.right_paths = utils.all_files_under(
             os.path.join('../data', dataset_path), extension=extension, prefix='right')
+        self.test_left_paths = utils.all_files_under(
+            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='left')
+        self.test_right_paths = utils.all_files_under(
+            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='right')
 
         self.seed = 123  # random seed to fix random split train and validation data
         self.percentage = 0.04  # percentage used for validation data
@@ -37,11 +41,11 @@ class DataLoader(object):
         self.train_left_img_paths, self.train_right_img_paths = [], []
         self.val_left_img_paths, self.val_right_img_paths = [], []
 
-        self._split_train_val()
+        self._init_train_val_test()
         self._read_parameters()
         self._calculate_min_max_normalize()
 
-    def _split_train_val(self):
+    def _init_train_val_test(self):
         self.train_left_img_paths, self.val_left_img_paths = train_test_split(
             self.left_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
         self.train_right_img_paths, self.val_right_img_paths = train_test_split(
@@ -49,40 +53,34 @@ class DataLoader(object):
 
         self.num_trains = len(self.train_left_img_paths)
         self.num_vals = len(self.val_left_img_paths)
+        self.num_tests = len(self.test_left_paths)
         self.train_data = np.zeros((self.num_trains, self.num_attributes), dtype=np.float32)
         self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
+        self.test_data = np.zeros((self.num_tests, self.num_attributes), dtype=np.float32)
 
         logging.info('num train paths: {}'.format(self.num_trains))
         logging.info('num val paths: {}'.format(self.num_vals))
+        logging.info('num test paths: {}'.format(self.num_tests))
 
     def _read_parameters(self):
-        for idx in range(len(self.train_left_img_paths)):
-            path = self.train_left_img_paths[idx]
-            self.train_data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
-            self.train_data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
-            self.train_data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
-            self.train_data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
-            self.train_data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
-            self.train_data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
-            self.train_data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
+        data_paths = [(self.train_data, self.train_left_img_paths),
+                      (self.val_data, self.val_left_img_paths),
+                      (self.test_data, self.test_left_paths)]
 
-            # # check for error input
-            # if (self.train_data[idx, 2] < 0) or (self.train_data[idx, 5] < 0) or (self.train_data[idx, 6] < 0):
-            #     print('Error input! Image path: {}'.format(self.train_left_img_paths[idx]))
+        for data, img_paths in data_paths:
+            for idx in range(len(img_paths)):
+                path = img_paths[idx]
+                data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
+                data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
+                data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
+                data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
+                data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
+                data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
+                data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
 
-        for idx in range(len(self.val_left_img_paths)):
-            path = self.val_left_img_paths[idx]
-            self.val_data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
-            self.val_data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
-            self.val_data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
-            self.val_data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
-            self.val_data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
-            self.val_data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
-            self.val_data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
-
-            # # check for error input
-            # if (self.val_data[idx, 2] < 0) or (self.val_data[idx, 5] < 0) or (self.val_data[idx, 6] < 0):
-            #     print('Error input! Image path: {}'.format(self.val_left_img_paths[idx]))
+                # check for error input
+                if (data[idx, 2] < 0) or (data[idx, 5] < 0) or (data[idx, 6] < 0):
+                    print(' [!] Error image path: {}'.format(path))
 
     def _calculate_min_max_normalize(self):
         self.min_train = np.amin(self.train_data, axis=0)
@@ -114,7 +112,6 @@ class DataLoader(object):
         elif self.flags.mode == 3:
             raise NotImplementedError
 
-    # TODO: need to reivse for full val data
     def next_batch_val(self, idx):
         # imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
         imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
@@ -134,6 +131,33 @@ class DataLoader(object):
         elif self.flags.mode == 2:
             raise NotImplementedError
         elif self.flags.mode == 3:
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+
+    def next_batch_test(self, idx):
+        if idx < int(np.floor(self.num_tests / self.flags.batch_size)):
+            imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
+        else:
+            imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
+
+        left_imgs = [utils.load_data(self.test_left_paths[idx], img_size=self.img_size, is_gray_scale=True)
+                     for idx in imgs_idx]
+        left_imgs = np.asarray(left_imgs).astype(np.float32)
+        right_imgs = [utils.load_data(self.test_right_paths[idx], img_size=self.img_size, is_gray_scale=True)
+                      for idx in imgs_idx]
+        right_imgs = np.asarray(right_imgs).astype(np.float32)
+        gt_arr = self.test_data[imgs_idx].copy()
+
+        if self.flags.mode == 0:
+            return left_imgs, gt_arr
+        elif self.flags.mode == 1:
+            return np.concatenate((left_imgs, right_imgs), axis=3), gt_arr
+        elif self.flags.mode == 2:
+            raise NotImplementedError
+        elif self.flags.mode == 3:
+            raise NotImplementedError
+        else:
             raise NotImplementedError
 
     def un_normalize(self, preds):
