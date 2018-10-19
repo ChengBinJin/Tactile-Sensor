@@ -6,6 +6,7 @@
 # ---------------------------------------------------------
 import os
 import cv2
+import logging
 import numpy as np
 from sklearn.model_selection import train_test_split
 
@@ -13,18 +14,25 @@ import utils as utils
 
 
 class DataLoader(object):
-    def __init__(self, flags, path, extension='bmp'):
+    def __init__(self, flags, dataset_path, extension='bmp', log_path=None):
         self.flags = flags
+        self.log_path = log_path
+        logging.basicConfig(filename=os.path.join(self.log_path, 'info.log'), level=logging.INFO,
+                            format='%(levelname)s:%(message)s')
+
         if (self.flags.mode == 0) or (self.flags.mode == 2):
             self.out_channel = 1
         elif (self.flags.mode == 1) or (self.flags.mode == 3):
             self.out_channel = 2
+
         self.img_size = (int(480 * self.flags.resize_ratio), int(640 * self.flags.resize_ratio), self.out_channel)
-        self.left_paths = utils.all_files_under(os.path.join('../data', path), extension=extension, prefix='left')
-        self.right_paths = utils.all_files_under(os.path.join('../data', path), extension=extension, prefix='right')
+        self.left_paths = utils.all_files_under(
+            os.path.join('../data', dataset_path), extension=extension, prefix='left')
+        self.right_paths = utils.all_files_under(
+            os.path.join('../data', dataset_path), extension=extension, prefix='right')
 
         self.seed = 123  # random seed to fix random split train and validation data
-        self.percentage = 0.2  # percentage used for validation data
+        self.percentage = 0.04  # percentage used for validation data
         self.num_attributes = 7  # number of attributes for data
         self.train_left_img_paths, self.train_right_img_paths = [], []
         self.val_left_img_paths, self.val_right_img_paths = [], []
@@ -44,8 +52,8 @@ class DataLoader(object):
         self.train_data = np.zeros((self.num_trains, self.num_attributes), dtype=np.float32)
         self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
 
-        print('num train_paths: {}'.format(self.num_trains))
-        print('num val_paths: {}'.format(self.num_vals))
+        logging.info('num train paths: {}'.format(self.num_trains))
+        logging.info('num val paths: {}'.format(self.num_vals))
 
     def _read_parameters(self):
         for idx in range(len(self.train_left_img_paths)):
@@ -84,8 +92,8 @@ class DataLoader(object):
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
-        print('min_train: {}'.format(self.min_train))
-        print('max_train: {}'.format(self.max_train))
+        logging.info('min attribute: {}'.format(self.min_train))
+        logging.info('max attribute: {}'.format(self.max_train))
 
     def next_batch(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
@@ -107,8 +115,10 @@ class DataLoader(object):
             raise NotImplementedError
 
     # TODO: need to reivse for full val data
-    def next_batch_val(self):
-        imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
+    def next_batch_val(self, idx):
+        # imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
+        imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
+
         left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True)
                      for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)

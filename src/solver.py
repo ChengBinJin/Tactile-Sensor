@@ -5,11 +5,12 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import math
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
 
-import plot as plot
+# import plot as plot
 from dataset import DataLoader
 from vgg16 import VGG16_TL
 
@@ -21,11 +22,12 @@ class Solver(object):
         self.sess = tf.Session(config=run_config)
 
         self.flags = flags
-        self.dataset = DataLoader(self.flags, path=self.flags.dataset)
-        self.model = VGG16_TL(self.sess, self.flags, self.dataset)
-
+        self.iter_time, self.eval_time = 0, 0
+        self.best_avg_err = math.inf
         self._make_folders()
-        self.iter_time = 0
+
+        self.dataset = DataLoader(self.flags, dataset_path=self.flags.dataset, log_path=self.log_out_dir)
+        self.model = VGG16_TL(self.sess, self.flags, self.dataset)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
@@ -34,21 +36,22 @@ class Solver(object):
         if self.flags.is_train:  # train stage
             if self.flags.load_model is None:
                 cur_time = datetime.now().strftime("%Y%m%d-%H%M")
-                self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+                self.model_out_dir = "results/{}_mode{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
                 if not os.path.isdir(self.model_out_dir):
                     os.makedirs(self.model_out_dir)
             else:
                 cur_time = self.flags.load_model
-                self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+                self.model_out_dir = "results/{}_mode{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
 
-            self.log_out_dir = "results/{}_{}/logs/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+            self.log_out_dir = "results/{}_mode{}/logs/{}".format(self.flags.dataset, self.flags.mode, cur_time)
             self.train_writer = tf.summary.FileWriter(self.log_out_dir, graph_def=self.sess.graph_def)
 
         elif not self.flags.is_train:  # test stage
-            self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode,
-                                                                 self.flags.load_model)
-            self.test_out_dir = "results/{}_{}/test/{}".format(self.flags.dataset, self.flags.mode,
-                                                               self.flags.load_model)
+            self.model_out_dir = "results/{}_mode{}/model/{}".format(
+                self.flags.dataset, self.flags.mode, self.flags.load_model)
+            self.test_out_dir = "results/{}_mode{}/test/{}".format(
+                self.flags.dataset, self.flags.mode, self.flags.load_model)
+
             if not os.path.isdir(self.test_out_dir):
                 os.makedirs(self.test_out_dir)
 
@@ -61,44 +64,55 @@ class Solver(object):
                 print('[! Load Failed...\n')
 
         while self.iter_time < self.flags.iters:
-            self.eval(self.iter_time)  # evaluate the
-
             imgs, gts = self.dataset.next_batch()
             loss, summary = self.model.train_step(imgs, gts)
             self.model.print_info(loss, self.iter_time)
             self.train_writer.add_summary(summary, self.iter_time)
             self.train_writer.flush()
 
-            # save model
-            self.save_model(self.iter_time)
+            avg_error = self.eval(self.iter_time)  # evaluate the
+            if avg_error < self.best_avg_err:
+                self.best_avg_err = avg_error
+                self.save_model(self.iter_time)  # save model
+
             self.iter_time += 1
 
-        self.dataset.test_read_img()
+        # self.dataset.test_read_img()
 
     def test(self):
         print('Hello test!')
 
     def eval(self, iter_time):
+        avg_error = math.inf
         if np.mod(iter_time, self.flags.eval_freq) == 0:
-            imgs, gts = self.dataset.next_batch_val()                   # sample val data
-            preds = self.model.test_step(imgs)                          # predict
-            unnorm_preds = self.dataset.un_normalize(preds)           # un-normalize predicts
+            preds_total, gts_total = [], []
+            num_idxs = int(self.dataset.num_vals / self.flags.batch_size)
+            for idx in range(num_idxs):
+                print('{} / {}'.format(idx+1, num_idxs))
+                imgs, gts = self.dataset.next_batch_val(idx)  # sample val data
+                preds = self.model.test_step(imgs)  # predict
+                preds_total.append(preds)
+                gts_total.append(gts)
 
-            error = np.mean(np.sqrt(np.square(unnorm_preds - gts)), axis=0)   # calucate error rate
-            print('error: {}'.format(error))
-            print('gt: {}'.format(gts[0]))
-            print('unnorm_preds: {}'.format(unnorm_preds[0]))
-            print('preds: {}\n'.format(preds[0]))
+            preds_total = np.asarray(preds_total).reshape((-1, 7))
+            gts_total = np.asarray(gts_total).reshape((-1, 7))
 
-            plot.plot('error', error)  # plot error
-            plot.flush(self.log_out_dir)
-            plot.tick()
+            # unnorm_preds = self.dataset.un_normalize(preds_total)  # un-normalize predicts
+            # error = np.mean(np.sqrt(np.square(unnorm_preds - gts_total)), axis=0)  # calucate error rate
+            # print('python error: {}'.format(error))
+
+            avg_error, summary = self.model.eval_step(preds_total, gts_total)
+            self.train_writer.add_summary(summary, self.eval_time)
+            self.train_writer.flush()
+
+            self.eval_time += 1
+
+        return avg_error
 
     def save_model(self, iter_time):
-        if np.mod(iter_time + 1, self.flags.save_freq) == 0:
-            model_name = 'model'
-            self.saver.save(self.sess, os.path.join(self.model_out_dir, model_name), global_step=iter_time)
-            print('[*] Model saved!')
+        model_name = 'model'
+        self.saver.save(self.sess, os.path.join(self.model_out_dir, model_name), global_step=iter_time)
+        print('[*] Model saved! Avg. error: {}'.format(self.best_avg_err))
 
     def load_model(self):
         print(' [*] Reading checkpoint...')

@@ -15,7 +15,7 @@ class VGG16_TL:
         self.flags = flags
         self.dataset = dataset
         self.img_size = self.dataset.img_size
-        print('self.img_size: {}'.format(self.img_size))
+        # print('self.img_size: {}'.format(self.img_size))
 
         self.hidden = 4096  # hyper_parameters
         self.first_conv = 64
@@ -34,6 +34,7 @@ class VGG16_TL:
     def _build_model(self):
         self.input_img_tfph = tf.placeholder(
             tf.float32, shape=[None, self.img_size[0], self.img_size[1], self.img_size[2]], name='imgage_ph')
+        self.pred_tfph = tf.placeholder(tf.float32, shape=[None, self.num_regress], name='pred_ph')
         self.gt_regress_tfph = tf.placeholder(tf.float32, shape=[None, self.num_regress], name='gt_ph')
         self.keep_prob_tfph = tf.placeholder(tf.float32, name='dropbout_ph')
 
@@ -50,6 +51,8 @@ class VGG16_TL:
         self.total_loss = self.data_loss + self.reg_term
 
         self.train_ops = self.optimizer(loss=self.total_loss)
+        self.eval_ops = tf.reduce_mean(tf.sqrt(tf.square(self.pred_tfph - self.gt_regress_tfph)), axis=0)
+        self.avg_err = tf.reduce_mean(self.eval_ops)
 
     def _tensorboard(self):
         tf.summary.scalar('loss/reg_term', self.reg_term)
@@ -57,8 +60,20 @@ class VGG16_TL:
         tf.summary.scalar('loss/toal_loss', self.total_loss)
         self.summary_op = tf.summary.merge_all()
 
+        self.eval_summary_op = tf.summary.merge([
+            tf.summary.scalar('eval/X_err', self.eval_ops[0]),
+            tf.summary.scalar('eval/Y_err', self.eval_ops[1]),
+            tf.summary.scalar('eval/Z_err', self.eval_ops[2]),
+            tf.summary.scalar('eval/Ra_err', self.eval_ops[3]),
+            tf.summary.scalar('eval/Rb_err', self.eval_ops[4]),
+            tf.summary.scalar('eval/F_err', self.eval_ops[5]),
+            tf.summary.scalar('eval/D_err', self.eval_ops[6]),
+            tf.summary.scalar('eval/avg_err', self.avg_err)])
+
     def network(self, img, name):
         with tf.variable_scope(name):
+            tf_utils.print_activations(img)
+
             # conv1
             # relu1_1 = self.conv_layer(img, 'conv1_1')
             conv1_1 = tf_utils.conv2d(img, self.first_conv, k_h=3, k_w=3, d_h=1, d_w=1, name='cvon1_1')
@@ -128,6 +143,18 @@ class VGG16_TL:
         preds = self.sess.run(self.predicts, feed_dict=feed_dict)
 
         return preds
+
+    def eval_step(self, preds, gts):
+        unnorm_preds = self.dataset.un_normalize(preds)  # un-normalize predicts
+
+        run_op = [self.eval_ops,  self.avg_err, self.eval_summary_op]
+        feed_dict = {self.pred_tfph: unnorm_preds, self.gt_regress_tfph: gts}
+        error, avg_error, eval_summary = self.sess.run(run_op, feed_dict=feed_dict)
+
+        print('tesnorflow error: {}'.format(error))
+        print('avg. error: {}'.format(avg_error))
+
+        return avg_error, eval_summary
 
     def print_info(self, loss, iter_time):
         if np.mod(iter_time, self.flags.print_freq) == 0:
