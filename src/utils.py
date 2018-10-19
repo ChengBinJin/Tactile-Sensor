@@ -117,17 +117,19 @@ def create_record_canvas(h, w, real_disparity, norm_disparity, mask):
     return np.dstack((canvas, canvas, canvas))  # video write just save 3 channel frame
 
 
-def all_files_under(path, extension=None, append_path=True, sort=True):
+def all_files_under(path, extension=None, append_path=True, prefix=None, sort=True):
     if append_path:
         if extension is None:
-            filenames = [os.path.join(path, fname) for fname in os.listdir(path)]
+            filenames = [os.path.join(path, fname) for fname in os.listdir(path) if prefix in fname]
         else:
-            filenames = [os.path.join(path, fname) for fname in os.listdir(path) if fname.endswith(extension)]
+            filenames = [os.path.join(path, fname) for fname in os.listdir(path)
+                         if (fname.endswith(extension)) and (prefix in fname)]
     else:
         if extension is None:
-            filenames = [os.path.basename(fname) for fname in os.listdir(path)]
+            filenames = [os.path.basename(fname) for fname in os.listdir(path) if prefix in fname]
         else:
-            filenames = [os.path.basename(fname) for fname in os.listdir(path) if fname.endswith(extension)]
+            filenames = [os.path.basename(fname) for fname in os.listdir(path)
+                         if (fname.endswith(extension)) and (prefix in fname)]
 
     if sort:
         filenames = sorted(filenames)
