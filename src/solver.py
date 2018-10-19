@@ -5,7 +5,6 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
-import cv2
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
@@ -23,31 +22,33 @@ class Solver(object):
 
         self.flags = flags
         self.dataset = DataLoader(self.flags, path=self.flags.dataset)
-        # self.model = VGG16_TL(self.sess, self.flags, self.dataset)
+        self.model = VGG16_TL(self.sess, self.flags, self.dataset)
 
         self._make_folders()
         self.iter_time = 0
 
-        # self.saver = tf.train.Saver()
-        # self.sess.run(tf.global_variables_initializer())
+        self.saver = tf.train.Saver()
+        self.sess.run(tf.global_variables_initializer())
 
     def _make_folders(self):
         if self.flags.is_train:  # train stage
             if self.flags.load_model is None:
                 cur_time = datetime.now().strftime("%Y%m%d-%H%M")
-                self.model_out_dir = "{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+                self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
                 if not os.path.isdir(self.model_out_dir):
                     os.makedirs(self.model_out_dir)
             else:
                 cur_time = self.flags.load_model
-                self.model_out_dir = "{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+                self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, cur_time)
 
-            self.log_out_dir = "{}_{}/logs/{}".format(self.flags.dataset, self.flags.mode, cur_time)
+            self.log_out_dir = "results/{}_{}/logs/{}".format(self.flags.dataset, self.flags.mode, cur_time)
             self.train_writer = tf.summary.FileWriter(self.log_out_dir, graph_def=self.sess.graph_def)
 
         elif not self.flags.is_train:  # test stage
-            self.model_out_dir = "{}_{}/model/{}".format(self.flags.dataset, self.flags.mode, self.flags.load_model)
-            self.test_out_dir = "{}_{}/test/{}".format(self.flags.dataset, self.flags.mode, self.flags.load_model)
+            self.model_out_dir = "results/{}_{}/model/{}".format(self.flags.dataset, self.flags.mode,
+                                                                 self.flags.load_model)
+            self.test_out_dir = "results/{}_{}/test/{}".format(self.flags.dataset, self.flags.mode,
+                                                               self.flags.load_model)
             if not os.path.isdir(self.test_out_dir):
                 os.makedirs(self.test_out_dir)
 
@@ -60,36 +61,19 @@ class Solver(object):
                 print('[! Load Failed...\n')
 
         while self.iter_time < self.flags.iters:
-            # self.eval(self.iter_time)  # evaluate the
+            self.eval(self.iter_time)  # evaluate the
 
             imgs, gts = self.dataset.next_batch()
-            print('imgs shape: {}'.format(imgs.shape))
+            loss, summary = self.model.train_step(imgs, gts)
+            self.model.print_info(loss, self.iter_time)
+            self.train_writer.add_summary(summary, self.iter_time)
+            self.train_writer.flush()
 
-            for idx in range(imgs.shape[0]):
-                if self.flags.mode == 0:
-                    left_img = (imgs[idx] + 1.) / 2.
-                    cv2.imshow('show', left_img)
-                    cv2.waitKey(0)
-                elif self.flags.mode == 1:
-                    img = imgs[idx]
-                    left_img = img[:, :, 0]
-                    right_img = img[:, :, 1]
-                    show_img = np.zeros((left_img.shape[0], 2*left_img.shape[1]))
-                    show_img[:, :left_img.shape[1]] = (left_img + 1.) / 2.
-                    show_img[:, left_img.shape[1]:] = (right_img + 1.) / 2.
-                    cv2.imshow('show', show_img)
-                    cv2.waitKey(0)
-
-            # loss, summary = self.model.train_step(imgs, gts)
-            # self.model.print_info(loss, self.iter_time)
-            # self.train_writer.add_summary(summary, self.iter_time)
-            # self.train_writer.flush()
-            #
-            # # save model
-            # self.save_model(self.iter_time)
+            # save model
+            self.save_model(self.iter_time)
             self.iter_time += 1
 
-        # self.dataset.test_read_img()
+        self.dataset.test_read_img()
 
     def test(self):
         print('Hello test!')
