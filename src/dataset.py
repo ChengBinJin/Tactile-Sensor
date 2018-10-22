@@ -13,12 +13,15 @@ from sklearn.model_selection import train_test_split
 import utils as utils
 
 
+logger = logging.getLogger(__name__)  # logger
+logger.setLevel(logging.INFO)
+
+
 class DataLoader(object):
     def __init__(self, flags, dataset_path, extension='bmp', log_path=None):
         self.flags = flags
         self.log_path = log_path
-        logging.basicConfig(filename=os.path.join(self.log_path, 'info.log'), level=logging.INFO,
-                            format='%(asctime)s:%(levelname)s:%(message)s')
+        self._init_logger()  # initialize logger
 
         if (self.flags.mode == 0) or (self.flags.mode == 2):
             self.out_channel = 1
@@ -45,6 +48,20 @@ class DataLoader(object):
         self._read_parameters()
         self._calculate_min_max_normalize()
 
+    def _init_logger(self):
+        if self.flags.is_train:
+            formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
+            # file handler
+            file_handler = logging.FileHandler(os.path.join(self.log_path, 'dataset.log'))
+            file_handler.setFormatter(formatter)
+            file_handler.setLevel(logging.INFO)
+            # stream handler
+            stream_handler = logging.StreamHandler()
+            stream_handler.setFormatter(formatter)
+            # add handlers
+            logger.addHandler(file_handler)
+            logger.addHandler(stream_handler)
+
     def _init_train_val_test(self):
         self.train_left_img_paths, self.val_left_img_paths = train_test_split(
             self.left_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
@@ -58,9 +75,9 @@ class DataLoader(object):
         self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
         self.test_data = np.zeros((self.num_tests, self.num_attributes), dtype=np.float32)
 
-        logging.info('num train paths: {}'.format(self.num_trains))
-        logging.info('num val paths: {}'.format(self.num_vals))
-        logging.info('num test paths: {}'.format(self.num_tests))
+        logger.info('num train paths: {}'.format(self.num_trains))
+        logger.info('num val paths: {}'.format(self.num_vals))
+        logger.info('num test paths: {}'.format(self.num_tests))
 
     def _read_parameters(self):
         data_paths = [(self.train_data, self.train_left_img_paths),
@@ -90,8 +107,8 @@ class DataLoader(object):
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
-        logging.info('min attribute: {}'.format(self.min_train))
-        logging.info('max attribute: {}'.format(self.max_train))
+        logger.info('min attribute: {}'.format(self.min_train))
+        logger.info('max attribute: {}'.format(self.max_train))
 
     def next_batch(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)

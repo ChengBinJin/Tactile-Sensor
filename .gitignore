@@ -7,3 +7,5 @@ src/.idea/
 src/__pycache__/
 src/videos/
 src/img/
+src/results/
+

@@ -1,3 +1,4 @@
+import logging
 import collections
 import numpy as np
 import tensorflow as tf
@@ -7,14 +8,18 @@ from tensorflow.contrib.layers import flatten
 import tensorflow_utils as tf_utils
 import utils as utils
 
+logger = logging.getLogger(__name__)  # logger
+logger.setLevel(logging.INFO)
+
 
 # noinspection PyPep8Naming
 class VGG16_TL:
-    def __init__(self, sess, flags, dataset):
+    def __init__(self, sess, flags, dataset, log_path=None):
         self.sess = sess
         self.flags = flags
         self.dataset = dataset
         self.img_size = self.dataset.img_size
+        self.log_path = log_path
         # print('self.img_size: {}'.format(self.img_size))
 
         self.hidden = 4096  # hyper_parameters
@@ -28,8 +33,13 @@ class VGG16_TL:
         with open(weight_file_path, 'rb') as f:
             self.pretrained_weights = cpickle.load(f, encoding='latin1')
 
-        self._build_model()
-        self._tensorboard()
+        self._init_logger()  # init logger
+        self._build_model()  # init graph
+        self._tensorboard()  # init tensorboard
+
+    def _init_logger(self):
+        if self.flags.is_train:
+            tf_utils._init_logger(self.log_path)
 
     def _build_model(self):
         self.input_img_tfph = tf.placeholder(

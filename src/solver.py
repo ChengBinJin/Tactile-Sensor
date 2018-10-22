@@ -5,7 +5,9 @@
 # Email: sbkim0407@gmail.com
 # ---------------------------------------------------------
 import os
+import logging
 import math
+import xlsxwriter
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
@@ -13,6 +15,10 @@ from datetime import datetime
 # import plot as plot
 from dataset import DataLoader
 from vgg16 import VGG16_TL
+
+
+logger = logging.getLogger(__name__)  # logger
+logger.setLevel(logging.INFO)
 
 
 class Solver(object):
@@ -25,9 +31,10 @@ class Solver(object):
         self.iter_time, self.eval_time = 0, 0
         self.best_avg_err = math.inf
         self._make_folders()
+        self._init_logger()
 
         self.dataset = DataLoader(self.flags, dataset_path=self.flags.dataset, log_path=self.log_out_dir)
-        self.model = VGG16_TL(self.sess, self.flags, self.dataset)
+        self.model = VGG16_TL(self.sess, self.flags, self.dataset, log_path=self.log_out_dir)
 
         self.saver = tf.train.Saver()
         self.sess.run(tf.global_variables_initializer())
@@ -58,13 +65,44 @@ class Solver(object):
             if not os.path.isdir(self.test_out_dir):
                 os.makedirs(self.test_out_dir)
 
+    def _init_logger(self):
+        if self.flags.is_train:
+            formatter = logging.Formatter('%(asctime)s:%(name)s:%(message)s')
+            # file handler
+            file_handler = logging.FileHandler(os.path.join(self.log_out_dir, 'solver.log'))
+            file_handler.setFormatter(formatter)
+            file_handler.setLevel(logging.INFO)
+            # stream handler
+            stream_handler = logging.StreamHandler()
+            stream_handler.setFormatter(formatter)
+            # add handlers
+            logger.addHandler(file_handler)
+            logger.addHandler(stream_handler)
+
+            logger.info('gpu_index: {}'.format(self.flags.gpu_index))
+            logger.info('batch_size: {}'.format(self.flags.batch_size))
+            logger.info('resize_ratio: {}'.format(self.flags.resize_ratio))
+            logger.info('num_regress: {}'.format(self.flags.num_regress))
+
+            logger.info('mode: {}'.format(self.flags.mode))
+            logger.info('dataset: {}'.format(self.flags.dataset))
+            logger.info('is_train: {}'.format(self.flags.is_train))
+            logger.info('learning_rate: {}'.format(self.flags.learning_rate))
+            logger.info('weight_decay: {}'.format(self.flags.weight_decay))
+
+            logger.info('iters: {}'.format(self.flags.iters))
+            logger.info('print_freq: {}'.format(self.flags.print_freq))
+            logger.info('eval_freq: {}'.format(self.flags.eval_freq))
+            logger.info('save_freq: {}'.format(self.flags.save_freq))
+            logger.info('load_model: {}'.format(self.flags.load_model))
+
     def train(self):
         # load initialized checkpoint that provided
         if self.flags.load_model is not None:
             if self.load_model():
-                print('[*] Load SUCCESS!\n')
+                logger.info('[*] Load SUCCESS!\n')
             else:
-                print('[! Load Failed...\n')
+                logger.info('[! Load Failed...\n')
 
         while self.iter_time < self.flags.iters:
             imgs, gts = self.dataset.next_batch()
@@ -84,9 +122,9 @@ class Solver(object):
 
     def test(self):
         if self.load_model():
-            print(' [*] Load SUCCESS!')
+            logger.info(' [*] Load SUCCESS!')
         else:
-            print(' [!] Load Failed...')
+            logger.info(' [!] Load Failed...')
 
         self.test_eval()  # evaluation
 
@@ -129,15 +167,38 @@ class Solver(object):
         errors = np.sqrt(np.square(unnorm_preds_total - gts_total))
         print('errors shape: {}'.format(errors.shape))
 
-        # TODO: write errors to the Excel!
+        self.write_to_csv(unnorm_preds_total, gts_total)  # write to xlsx file
+
+    def write_to_csv(self, preds, gts):
+        # Create a workbook and add a worksheet
+        workbook = xlsxwriter.Workbook(os.path.join(self.test_out_dir, 'compare.xlsx'))
+        xlsFormat = workbook.add_format()
+        xlsFormat.set_align('center')
+        xlsFormat.set_valign('vcenter')
+
+        data_list = [('preds', preds), ('gts', gts), ('abs_error', np.abs(preds - gts))]
+        attributes = ['No', 'Name', 'X', 'Y', 'Z', 'Ra', 'Rb', 'F', 'D']
+        for file_name, data in data_list:
+            worksheet = workbook.add_worksheet(name=file_name)
+            for attr_idx in range(len(attributes)):
+                worksheet.write(0, attr_idx, attributes[attr_idx], xlsFormat)
+
+            for idx in range(self.dataset.num_tests):
+                for attr_idx in range(len(attributes)):
+                    if attr_idx == 0:
+                        worksheet.write(idx+1, attr_idx, str(idx).zfill(3), xlsFormat)
+                    elif attr_idx == 1:
+                        worksheet.write(idx+1, attr_idx, self.dataset.test_left_paths[idx], xlsFormat)
+                    else:
+                        worksheet.write(idx+1, attr_idx, '{:.3f}'.format(data[attr_idx-2, 0]), xlsFormat)
 
     def save_model(self, iter_time):
         model_name = 'model'
         self.saver.save(self.sess, os.path.join(self.model_out_dir, model_name), global_step=iter_time)
-        print('\n [*] Model saved! Avg. error: {}!\n'.format(self.best_avg_err))
+        logger.info(' [*] Model saved! Avg. error: {}!\n'.format(self.best_avg_err))
 
     def load_model(self):
-        print(' [*] Reading checkpoint...')
+        logger.info(' [*] Reading checkpoint...')
 
         ckpt = tf.train.get_checkpoint_state(self.model_out_dir)
         if ckpt and ckpt.model_checkpoint_path:
@@ -146,7 +207,7 @@ class Solver(object):
 
             meta_graph_path = ckpt.model_checkpoint_path + '.meta'
             self.iter_time = int(meta_graph_path.split('-')[-1].split('.')[0])
-            print(' [*] Load iter_time: {}'.format(self.iter_time))
+            logger.info(' [*] Load iter_time: {}'.format(self.iter_time))
             return True
         else:
             return False
