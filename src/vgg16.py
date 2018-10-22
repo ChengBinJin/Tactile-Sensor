@@ -172,6 +172,7 @@ class VGG16_TL:
                                                   ('toal_loss', loss[0]),
                                                   ('data_loss', loss[1]),
                                                   ('reg_term', loss[2]),
+                                                  ('mode', self.flags.mode),
                                                   ('dataset', self.flags.dataset),
                                                   ('gpu_index', self.flags.gpu_index)])
 

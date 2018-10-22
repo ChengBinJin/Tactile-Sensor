@@ -8,6 +8,7 @@ import os
 import logging
 import math
 import xlsxwriter
+import time
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
@@ -93,7 +94,6 @@ class Solver(object):
             logger.info('iters: {}'.format(self.flags.iters))
             logger.info('print_freq: {}'.format(self.flags.print_freq))
             logger.info('eval_freq: {}'.format(self.flags.eval_freq))
-            logger.info('save_freq: {}'.format(self.flags.save_freq))
             logger.info('load_model: {}'.format(self.flags.load_model))
 
     def train(self):
@@ -156,16 +156,23 @@ class Solver(object):
         gts_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
         num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
 
+        total_pt = 0.
         for idx in range(num_idxs):
             print('[{}] / [{}]'.format(idx+1, num_idxs))
             imgs, gts = self.dataset.next_batch_test(idx)  # sample test data
+
+            tic = time.time()
             preds = self.model.test_step(imgs)  # predict
+            total_pt += time.time() - tic
+
             preds_total[idx*self.flags.batch_size:idx*self.flags.batch_size+preds.shape[0], :] = preds
             gts_total[idx*self.flags.batch_size:idx*self.flags.batch_size+gts.shape[0], :] = gts
 
         unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
-        errors = np.sqrt(np.square(unnorm_preds_total - gts_total))
-        print('errors shape: {}'.format(errors.shape))
+        # errors = np.sqrt(np.square(unnorm_preds_total - gts_total))
+        # print('errors shape: {}'.format(errors.shape))
+
+        print(' [*] Avg. processing time: {:.3f} ms.'.format(total_pt / self.dataset.num_tests * 1000))
 
         self.write_to_csv(unnorm_preds_total, gts_total)  # write to xlsx file
 
@@ -190,7 +197,7 @@ class Solver(object):
                     elif attr_idx == 1:
                         worksheet.write(idx+1, attr_idx, self.dataset.test_left_paths[idx], xlsFormat)
                     else:
-                        worksheet.write(idx+1, attr_idx, '{:.3f}'.format(data[attr_idx-2, 0]), xlsFormat)
+                        worksheet.write(idx+1, attr_idx, '{:.2f}'.format(data[attr_idx-2, 0]), xlsFormat)
 
     def save_model(self, iter_time):
         model_name = 'model'
