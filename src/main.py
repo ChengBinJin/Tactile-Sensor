@@ -16,7 +16,7 @@ tf.flags.DEFINE_float('resize_ratio', 0.5, 'resie ratio for originam image, defa
 tf.flags.DEFINE_integer('num_regress', 7, 'number of regresion, default: 7')
 
 # 0: left img; 1: both imgs; 2: left circ img; 3: both circ imgs.
-tf.flags.DEFINE_integer('mode', 0, 'input data type, default: 0')
+tf.flags.DEFINE_integer('mode', 2, 'input data type, default: 1')
 tf.flags.DEFINE_string('dataset', 'train01', 'dataset name [train01, train02], default: train01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for Adam, default: 0.001')

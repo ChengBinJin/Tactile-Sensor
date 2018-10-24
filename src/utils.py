@@ -137,8 +137,11 @@ def all_files_under(path, extension=None, append_path=True, prefix=None, sort=Tr
     return filenames
 
 
-def load_data(img_path, img_size, is_gray_scale=False):
+def load_data(img_path, img_size, is_gray_scale=False, mode=0):
     img = load_image(img_path=img_path, img_size=img_size, is_gray_scale=is_gray_scale)
+
+    if (mode == 2) or (mode == 3):
+        img = binarize_img(img)
     img = img / 127.5 - 1.0
 
     # hope output should be [h, w, c]
@@ -146,6 +149,14 @@ def load_data(img_path, img_size, is_gray_scale=False):
         img = np.expand_dims(img, axis=2)
 
     return img
+
+
+def binarize_img(img):
+    threshold = 255. * 0.2
+    _, thres_img = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
+    output = cv2.morphologyEx(thres_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+
+    return output
 
 
 def load_image(img_path, img_size, is_gray_scale=False):

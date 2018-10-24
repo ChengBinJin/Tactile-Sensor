@@ -106,49 +106,45 @@ class DataLoader(object):
 
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
+        self.norm_val_data = (self.val_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
         logger.info('min attribute: {}'.format(self.min_train))
         logger.info('max attribute: {}'.format(self.max_train))
 
     def next_batch(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
-        left_imgs = [utils.load_data(self.train_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                     for idx in imgs_idx]
+        left_imgs = [utils.load_data(self.train_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                     mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
-        right_imgs = [utils.load_data(self.train_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                      for idx in imgs_idx]
+        right_imgs = [utils.load_data(self.train_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                      mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         gt_arr = self.norm_train_data[imgs_idx].copy()
 
-        if self.flags.mode == 0:
+        if (self.flags.mode == 0) or (self.flags.mode == 2):
             return left_imgs, gt_arr
-        elif self.flags.mode == 1:
+        elif (self.flags.mode == 1) or (self.flags.mode == 3):
             return np.concatenate((left_imgs, right_imgs), axis=3), gt_arr
-        elif self.flags.mode == 2:
-            raise NotImplementedError
-        elif self.flags.mode == 3:
+        else:
             raise NotImplementedError
 
     def next_batch_val(self, idx):
         # imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
         imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
 
-        left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                     for idx in imgs_idx]
+        left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                     mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
-        right_imgs = [utils.load_data(self.val_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                      for idx in imgs_idx]
+        right_imgs = [utils.load_data(self.val_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                      mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
-        gt_arr = self.val_data[imgs_idx].copy()
+        # gt_arr = self.val_data[imgs_idx].copy()
+        gt_arr = self.norm_val_data[imgs_idx].copy()
 
-        if self.flags.mode == 0:
+        if (self.flags.mode == 0) or (self.flags.mode == 2):
             return left_imgs, gt_arr
-        elif self.flags.mode == 1:
+        elif (self.flags.mode == 1) or (self.flags.mode == 3):
             return np.concatenate((left_imgs, right_imgs), axis=3), gt_arr
-        elif self.flags.mode == 2:
-            raise NotImplementedError
-        elif self.flags.mode == 3:
-            raise NotImplementedError
         else:
             raise NotImplementedError
 
@@ -158,22 +154,18 @@ class DataLoader(object):
         else:
             imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
 
-        left_imgs = [utils.load_data(self.test_left_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                     for idx in imgs_idx]
+        left_imgs = [utils.load_data(self.test_left_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                     mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
-        right_imgs = [utils.load_data(self.test_right_paths[idx], img_size=self.img_size, is_gray_scale=True)
-                      for idx in imgs_idx]
+        right_imgs = [utils.load_data(self.test_right_paths[idx], img_size=self.img_size, is_gray_scale=True,
+                                      mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         gt_arr = self.test_data[imgs_idx].copy()
 
-        if self.flags.mode == 0:
+        if (self.flags.mode == 0) or (self.flags.mode == 2):
             return left_imgs, gt_arr
-        elif self.flags.mode == 1:
+        elif (self.flags.mode == 1) or (self.flags.mode == 3):
             return np.concatenate((left_imgs, right_imgs), axis=3), gt_arr
-        elif self.flags.mode == 2:
-            raise NotImplementedError
-        elif self.flags.mode == 3:
-            raise NotImplementedError
         else:
             raise NotImplementedError
 

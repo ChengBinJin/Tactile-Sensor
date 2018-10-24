@@ -142,8 +142,8 @@ class Solver(object):
                 preds_total[idx * self.flags.batch_size:idx * self.flags.batch_size + preds.shape[0], :] = preds
                 gts_total[idx * self.flags.batch_size:idx * self.flags.batch_size + gts.shape[0], :] = gts
 
-            unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
-            avg_error, summary = self.model.eval_step(unnorm_preds_total, gts_total)
+            # unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
+            avg_error, summary = self.model.eval_step(preds_total, gts_total)
             self.train_writer.add_summary(summary, self.eval_time)
             self.train_writer.flush()
             self.eval_time += 1
@@ -178,12 +178,17 @@ class Solver(object):
 
     def write_to_csv(self, preds, gts):
         # Create a workbook and add a worksheet
-        workbook = xlsxwriter.Workbook(os.path.join(self.test_out_dir, 'compare.xlsx'))
+        xlsx_name = self.flags.dataset + '_mode' + str(self.flags.mode).zfill(2) + '.xlsx'
+        workbook = xlsxwriter.Workbook(os.path.join(self.test_out_dir, xlsx_name))
         xlsFormat = workbook.add_format()
         xlsFormat.set_align('center')
         xlsFormat.set_valign('vcenter')
 
-        data_list = [('preds', preds), ('gts', gts), ('abs_error', np.abs(preds - gts))]
+        # calculate l2 error and average error
+        l2_error = np.sqrt(np.square(preds - gts))
+        avg_error = np.mean(l2_error, axis=0)
+
+        data_list = [('preds', preds), ('gts', gts), ('l2_error', l2_error)]
         attributes = ['No', 'Name', 'X', 'Y', 'Z', 'Ra', 'Rb', 'F', 'D']
         for file_name, data in data_list:
             worksheet = workbook.add_worksheet(name=file_name)
@@ -197,7 +202,13 @@ class Solver(object):
                     elif attr_idx == 1:
                         worksheet.write(idx+1, attr_idx, self.dataset.test_left_paths[idx], xlsFormat)
                     else:
-                        worksheet.write(idx+1, attr_idx, '{:.2f}'.format(data[attr_idx-2, 0]), xlsFormat)
+                        worksheet.write(idx + 1, attr_idx, data[idx, attr_idx - 2], xlsFormat)
+
+            # write average error
+            if file_name == 'l2_error':
+                worksheet.write(self.dataset.num_tests + 1, 1, 'average error', xlsFormat)
+                for attr_idx in range(7):
+                    worksheet.write(self.dataset.num_tests + 1, attr_idx + 2, avg_error[attr_idx], xlsFormat)
 
     def save_model(self, iter_time):
         model_name = 'model'

@@ -203,7 +203,7 @@ def main(_):
         total_pt += toc
         print('Predicts: {}'.format(preds))
 
-    print('PT: {} ms.'.format(total_pt / num_iters * 1000))
+    print('Avg. PT: {} ms.'.format(total_pt / num_iters * 1000))
 
 
 if __name__ == '__main__':
