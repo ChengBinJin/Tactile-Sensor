@@ -151,10 +151,14 @@ def load_data(img_path, img_size, is_gray_scale=False, mode=0):
     return img
 
 
-def binarize_img(img):
+def binarize_img(img, is_show=False):
     threshold = 255. * 0.2
     _, thres_img = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
     output = cv2.morphologyEx(thres_img, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+
+    if is_show:
+        cv2.imshow('output', output)
+        cv2.waitKey(0)
 
     return output
 

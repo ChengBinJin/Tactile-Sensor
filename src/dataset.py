@@ -95,8 +95,14 @@ class DataLoader(object):
                 data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
                 data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
 
+                # set F (force) or D (distance) to be zero, if it is smaller than zero
+                if data[idx, 5] < 0:
+                    data[idx, 5] = 0
+                if data[idx, 6] < 0:
+                    data[idx, 6] = 0
+
                 # check for error input
-                if (data[idx, 2] < 0) or (data[idx, 5] < 0) or (data[idx, 6] < 0):
+                if data[idx, 2] < 0:
                     print(' [!] Error image path: {}'.format(path))
 
     def _calculate_min_max_normalize(self):
