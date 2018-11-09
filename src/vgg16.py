@@ -26,7 +26,7 @@ class VGG16_TL:
         self.first_conv = 64
         self.num_regress = self.flags.num_regress
 
-        self.start_decay_step = int(np.ceil(self.flags.iters / 2))  # for optimizer
+        self.start_decay_step = 0  # int(np.ceil(self.flags.iters / 2))  # for optimizer
         self.decay_steps = self.flags.iters - self.start_decay_step
 
         weight_file_path = '../models/caffe_layers_value.pickle'

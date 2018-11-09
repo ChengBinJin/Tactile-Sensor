@@ -22,9 +22,9 @@ tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: Tru
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for Adam, default: 0.001')
 tf.flags.DEFINE_float('weight_decay', 1e-5, 'hyper-parameter for regularization term, default: 0.0001')
 
-tf.flags.DEFINE_integer('iters', 200000, 'number of iterations, default: 200000')
+tf.flags.DEFINE_integer('iters', 100000, 'number of iterations, default: 100000')
 tf.flags.DEFINE_integer('print_freq', 10, 'print frequency for loss, default: 10')
-tf.flags.DEFINE_integer('eval_freq', 500, 'evalue performance at test set, default: 500')
+tf.flags.DEFINE_integer('eval_freq', 1000, 'evalue performance at test set, default: 1000')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model taht you wish to continue training '
                        '(e.g. 20180907-1739), default: None')
 
