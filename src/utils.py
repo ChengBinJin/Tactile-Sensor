@@ -137,11 +137,20 @@ def all_files_under(path, extension=None, append_path=True, prefix=None, sort=Tr
     return filenames
 
 
-def load_data(img_path, img_size, is_gray_scale=False, mode=0):
+def load_data(img_path, img_size, is_crop=True, is_gray_scale=False, mode=0, is_show=False):
     img = load_image(img_path=img_path, img_size=img_size, is_gray_scale=is_gray_scale)
 
     if (mode == 2) or (mode == 3):
         img = binarize_img(img)
+
+    if is_crop:
+        img = img[13:205, 47:271]
+        # print('img_rec shape: {}'.format(img_rec.shape))
+
+        if is_show:
+            cv2.imshow('img', img)
+            cv2.waitKey(0)
+
     img = img / 127.5 - 1.0
 
     # hope output should be [h, w, c]

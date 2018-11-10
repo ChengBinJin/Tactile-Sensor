@@ -53,11 +53,12 @@ def read_xlsx(path):
         gts_arr[row_idx-1, 5] = float(file_name[file_name.find('_F') + 2:file_name.find('_D')])
         gts_arr[row_idx-1, 6] = float(file_name[file_name.find('_D') + 2:file_name.find('.bmp')])
 
-        # set F (force) or D (distance) to be zero, if it is smaller than zero
-        if gts_arr[row_idx-1, 5] < 0:
-            gts_arr[row_idx-1, 5] = 0
-        if gts_arr[row_idx-1, 6] < 0:
-            gts_arr[row_idx-1, 6] = 0
+        # if F is small than 0.1, all attributes are 0
+        if gts_arr[row_idx, 5] < 0.1:
+            gts_arr[row_idx, :] = 0
+        # if D is smalle than zero, we set to 0
+        if gts_arr[row_idx, 6] < 0:  # D
+            gts_arr[row_idx, 6] = 0
 
         for col_idx in range(2, worksheet.ncols):
             preds_arr[row_idx-1, col_idx-2] = float(worksheet.cell(row_idx, col_idx).value)

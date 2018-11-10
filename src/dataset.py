@@ -29,6 +29,10 @@ class DataLoader(object):
             self.out_channel = 2
 
         self.img_size = (int(480 * self.flags.resize_ratio), int(640 * self.flags.resize_ratio), self.out_channel)
+        if self.flags.is_crop:
+            self.img_input_size = (192, 224, self.out_channel)
+        else:
+            self.img_input_size = self.img_size
         self.left_paths = utils.all_files_under(
             os.path.join('../data', dataset_path), extension=extension, prefix='left')
         self.right_paths = utils.all_files_under(
@@ -63,10 +67,15 @@ class DataLoader(object):
             logger.addHandler(stream_handler)
 
     def _init_train_val_test(self):
-        self.train_left_img_paths, self.val_left_img_paths = train_test_split(
-            self.left_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
-        self.train_right_img_paths, self.val_right_img_paths = train_test_split(
-            self.right_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
+        # self.train_left_img_paths, self.val_left_img_paths = train_test_split(
+        #     self.left_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
+        # self.train_right_img_paths, self.val_right_img_paths = train_test_split(
+        #     self.right_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
+
+        self.train_left_img_paths = self.left_paths
+        self.val_left_img_paths = self.left_paths
+        self.train_right_img_paths = self.right_paths
+        self.val_right_img_paths = self.right_paths
 
         self.num_trains = len(self.train_left_img_paths)
         self.num_vals = len(self.val_left_img_paths)
@@ -89,16 +98,18 @@ class DataLoader(object):
                 path = img_paths[idx]
                 data[idx, 0] = float(path[path.find('_X')+2:path.find('_Y')])
                 data[idx, 1] = float(path[path.find('_Y')+2:path.find('_Z')])
-                data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
+                # data[idx, 2] = float(path[path.find('_Z')+2:path.find('_Ra')])
+                data[idx, 2] = 0.  # all Z are set to zero
                 data[idx, 3] = float(path[path.find('_Ra')+3:path.find('_Rb')])
                 data[idx, 4] = float(path[path.find('_Rb')+3:path.find('_F')])
                 data[idx, 5] = float(path[path.find('_F')+2:path.find('_D')])
                 data[idx, 6] = float(path[path.find('_D')+2:path.find('.bmp')])
 
-                # set F (force) or D (distance) to be zero, if it is smaller than zero
-                if data[idx, 5] < 0:
-                    data[idx, 5] = 0
-                if data[idx, 6] < 0:
+                # if F is small than 0.1, all attributes are 0
+                if data[idx, 5] < 0.1:
+                    data[idx, :] = 0
+                # if D is smalle than zero, we set to 0
+                if data[idx, 6] < 0:  # D
                     data[idx, 6] = 0
 
                 # check for error input
@@ -120,10 +131,10 @@ class DataLoader(object):
     def next_batch(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
         left_imgs = [utils.load_data(self.train_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                     mode=self.flags.mode) for idx in imgs_idx]
+                                     is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
         right_imgs = [utils.load_data(self.train_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                      mode=self.flags.mode) for idx in imgs_idx]
+                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         gt_arr = self.norm_train_data[imgs_idx].copy()
 
@@ -139,10 +150,10 @@ class DataLoader(object):
         imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
 
         left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                     mode=self.flags.mode) for idx in imgs_idx]
+                                     is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
         right_imgs = [utils.load_data(self.val_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                      mode=self.flags.mode) for idx in imgs_idx]
+                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         # gt_arr = self.val_data[imgs_idx].copy()
         gt_arr = self.norm_val_data[imgs_idx].copy()
@@ -161,10 +172,10 @@ class DataLoader(object):
             imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
 
         left_imgs = [utils.load_data(self.test_left_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                     mode=self.flags.mode) for idx in imgs_idx]
+                                     is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
         right_imgs = [utils.load_data(self.test_right_paths[idx], img_size=self.img_size, is_gray_scale=True,
-                                      mode=self.flags.mode) for idx in imgs_idx]
+                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         gt_arr = self.test_data[imgs_idx].copy()
 

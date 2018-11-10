@@ -87,6 +87,7 @@ class Solver(object):
 
             logger.info('mode: {}'.format(self.flags.mode))
             logger.info('dataset: {}'.format(self.flags.dataset))
+            logger.info('is_crop: {}'.format(self.flags.is_crop))
             logger.info('is_train: {}'.format(self.flags.is_train))
             logger.info('learning_rate: {}'.format(self.flags.learning_rate))
             logger.info('weight_decay: {}'.format(self.flags.weight_decay))
@@ -209,6 +210,8 @@ class Solver(object):
                 worksheet.write(self.dataset.num_tests + 1, 1, 'average error', xlsFormat)
                 for attr_idx in range(7):
                     worksheet.write(self.dataset.num_tests + 1, attr_idx + 2, avg_error[attr_idx], xlsFormat)
+
+        workbook.close()
 
     def save_model(self, iter_time):
         model_name = 'model'

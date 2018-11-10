@@ -18,7 +18,7 @@ class VGG16_TL:
         self.sess = sess
         self.flags = flags
         self.dataset = dataset
-        self.img_size = self.dataset.img_size
+        self.img_size = self.dataset.img_input_size
         self.log_path = log_path
         # print('self.img_size: {}'.format(self.img_size))
 
