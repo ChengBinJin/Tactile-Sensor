@@ -83,6 +83,7 @@ class Solver(object):
             logger.info('gpu_index: {}'.format(self.flags.gpu_index))
             logger.info('batch_size: {}'.format(self.flags.batch_size))
             logger.info('resize_ratio: {}'.format(self.flags.resize_ratio))
+            logger.info('dropout_ratio: {}'.format(self.flags.dropout_ratio))
             logger.info('num_regress: {}'.format(self.flags.num_regress))
 
             logger.info('mode: {}'.format(self.flags.mode))
@@ -131,13 +132,14 @@ class Solver(object):
 
     def eval(self, iter_time):
         avg_error = math.inf
-        if np.mod(iter_time, self.flags.eval_freq) == 0:
+        if np.mod(iter_time+1, self.flags.eval_freq) == 0:
             print(' [*] Evaluate...')
-            num_idxs = int(self.dataset.num_vals / self.flags.batch_size)
-            preds_total = np.zeros((num_idxs * self.flags.batch_size, self.flags.num_regress), dtype=np.float32)
-            gts_total = np.zeros((num_idxs * self.flags.batch_size, self.flags.num_regress), dtype=np.float32)
+            preds_total = np.zeros((self.dataset.num_vals, self.flags.num_regress), dtype=np.float32)
+            gts_total = np.zeros((self.dataset.num_vals, self.flags.num_regress), dtype=np.float32)
+            num_idxs = int(np.ceil(self.dataset.num_vals / self.flags.batch_size))
 
             for idx in range(num_idxs):
+                print('[{}] / [{}]'.format(idx + 1, num_idxs))
                 imgs, gts = self.dataset.next_batch_val(idx)  # sample val data
                 preds = self.model.test_step(imgs)  # predict
                 preds_total[idx * self.flags.batch_size:idx * self.flags.batch_size + preds.shape[0], :] = preds
@@ -155,16 +157,21 @@ class Solver(object):
         print(' [*] Evaluate...')
         preds_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
         gts_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
-        num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
+        # num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
+        num_idxs = self.dataset.num_tests
 
         total_pt = 0.
+        num_skips = 5
         for idx in range(num_idxs):
             print('[{}] / [{}]'.format(idx+1, num_idxs))
             imgs, gts = self.dataset.next_batch_test(idx)  # sample test data
 
-            tic = time.time()
+            tic = None
+            if idx > num_skips:  # skip first several processings
+                tic = time.time()
             preds = self.model.test_step(imgs)  # predict
-            total_pt += time.time() - tic
+            if idx > num_skips:  # skip first several processings
+                total_pt += time.time() - tic
 
             preds_total[idx*self.flags.batch_size:idx*self.flags.batch_size+preds.shape[0], :] = preds
             gts_total[idx*self.flags.batch_size:idx*self.flags.batch_size+gts.shape[0], :] = gts

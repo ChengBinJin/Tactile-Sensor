@@ -143,7 +143,8 @@ class VGG16_TL:
 
     def train_step(self, imgs, gt_regress):
         ops = [self.train_ops, self.total_loss, self.data_loss, self.reg_term, self.summary_op]
-        feed_dict = {self.input_img_tfph: imgs, self.gt_regress_tfph: gt_regress, self.keep_prob_tfph: 0.5}
+        feed_dict = {self.input_img_tfph: imgs, self.gt_regress_tfph: gt_regress,
+                     self.keep_prob_tfph: self.flags.dropout_ratio}
         _, total_loss, data_loss, reg_term, summary = self.sess.run(ops, feed_dict=feed_dict)
 
         return [total_loss, data_loss, reg_term], summary

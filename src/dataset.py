@@ -8,7 +8,7 @@ import os
 import cv2
 import logging
 import numpy as np
-from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import train_test_split
 
 import utils as utils
 
@@ -33,20 +33,26 @@ class DataLoader(object):
             self.img_input_size = (192, 224, self.out_channel)
         else:
             self.img_input_size = self.img_size
-        self.left_paths = utils.all_files_under(
-            os.path.join('../data', dataset_path), extension=extension, prefix='left')
-        self.right_paths = utils.all_files_under(
-            os.path.join('../data', dataset_path), extension=extension, prefix='right')
-        self.test_left_paths = utils.all_files_under(
-            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='left')
-        self.test_right_paths = utils.all_files_under(
-            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='right')
 
-        self.seed = 123  # random seed to fix random split train and validation data
-        self.percentage = 0.04  # percentage used for validation data
+        self.train_left_img_paths = utils.all_files_under(
+            os.path.join('../data', dataset_path), extension=extension, prefix='left')
+        self.train_right_img_paths = utils.all_files_under(
+            os.path.join('../data', dataset_path), extension=extension, prefix='right')
+        self.val_left_img_paths = utils.all_files_under(
+            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='left')
+        self.val_right_img_paths = utils.all_files_under(
+            os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='right')
+        self.test_left_img_paths = utils.all_files_under(
+            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='left')
+        self.test_right_img_paths = utils.all_files_under(
+            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='right')
+
+        # self.seed = 123  # random seed to fix random split train and validation data
+        # self.percentage = 0.04  # percentage used for validation data
+        # self.train_left_img_paths, self.train_right_img_paths = [], []
+        # self.val_left_img_paths, self.val_right_img_paths = [], []
+        # self.test_left_img_paths, self.test_right_img_paths = [], []
         self.num_attributes = 7  # number of attributes for data
-        self.train_left_img_paths, self.train_right_img_paths = [], []
-        self.val_left_img_paths, self.val_right_img_paths = [], []
 
         self._init_train_val_test()
         self._read_parameters()
@@ -72,14 +78,9 @@ class DataLoader(object):
         # self.train_right_img_paths, self.val_right_img_paths = train_test_split(
         #     self.right_paths, test_size=self.percentage, random_state=self.seed, shuffle=True)
 
-        self.train_left_img_paths = self.left_paths
-        self.val_left_img_paths = self.left_paths
-        self.train_right_img_paths = self.right_paths
-        self.val_right_img_paths = self.right_paths
-
         self.num_trains = len(self.train_left_img_paths)
         self.num_vals = len(self.val_left_img_paths)
-        self.num_tests = len(self.test_left_paths)
+        self.num_tests = len(self.test_left_img_paths)
         self.train_data = np.zeros((self.num_trains, self.num_attributes), dtype=np.float32)
         self.val_data = np.zeros((self.num_vals, self.num_attributes), dtype=np.float32)
         self.test_data = np.zeros((self.num_tests, self.num_attributes), dtype=np.float32)
@@ -91,7 +92,7 @@ class DataLoader(object):
     def _read_parameters(self):
         data_paths = [(self.train_data, self.train_left_img_paths),
                       (self.val_data, self.val_left_img_paths),
-                      (self.test_data, self.test_left_paths)]
+                      (self.test_data, self.test_left_img_paths)]
 
         for data, img_paths in data_paths:
             for idx in range(len(img_paths)):
@@ -124,12 +125,14 @@ class DataLoader(object):
         # normalize to [0, 1]
         self.norm_train_data = (self.train_data - self.min_train) / (self.max_train - self.min_train + self.eps)
         self.norm_val_data = (self.val_data - self.min_train) / (self.max_train - self.min_train + self.eps)
+        self.norm_test_data = (self.test_data - self.min_train) / (self.max_train - self.min_train + self.eps)
 
         logger.info('min attribute: {}'.format(self.min_train))
         logger.info('max attribute: {}'.format(self.max_train))
 
     def next_batch(self):
         imgs_idx = np.random.randint(low=0, high=self.num_trains, size=self.flags.batch_size)
+
         left_imgs = [utils.load_data(self.train_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
@@ -147,7 +150,11 @@ class DataLoader(object):
 
     def next_batch_val(self, idx):
         # imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
-        imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
+        # imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
+        if idx < int(np.floor(self.num_tests / self.flags.batch_size)):
+            imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
+        else:
+            imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
 
         left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
@@ -171,10 +178,10 @@ class DataLoader(object):
         else:
             imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
 
-        left_imgs = [utils.load_data(self.test_left_paths[idx], img_size=self.img_size, is_gray_scale=True,
+        left_imgs = [utils.load_data(self.test_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         left_imgs = np.asarray(left_imgs).astype(np.float32)
-        right_imgs = [utils.load_data(self.test_right_paths[idx], img_size=self.img_size, is_gray_scale=True,
+        right_imgs = [utils.load_data(self.test_right_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
                                       is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]
         right_imgs = np.asarray(right_imgs).astype(np.float32)
         gt_arr = self.test_data[imgs_idx].copy()

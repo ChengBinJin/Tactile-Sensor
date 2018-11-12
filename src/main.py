@@ -13,6 +13,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('batch_size', 16, 'batch size, default: 16')
 tf.flags.DEFINE_float('resize_ratio', 0.5, 'resie ratio for originam image, default: 0.5')
+tf.flags.DEFINE_float('dropout_ratio', 0.9, 'dropout ratio, default: 0.9')
 tf.flags.DEFINE_integer('num_regress', 7, 'number of regresion, default: 7')
 
 # 0: left img; 1: both imgs; 2: left circ img; 3: both circ imgs.
@@ -25,7 +26,7 @@ tf.flags.DEFINE_float('weight_decay', 1e-5, 'hyper-parameter for regularization 
 
 tf.flags.DEFINE_integer('iters', 100000, 'number of iterations, default: 100000')
 tf.flags.DEFINE_integer('print_freq', 10, 'print frequency for loss, default: 10')
-tf.flags.DEFINE_integer('eval_freq', 500, 'evalue performance at test set, default: 1000')
+tf.flags.DEFINE_integer('eval_freq', 500, 'evalue performance at test set, default: 500')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model taht you wish to continue training '
                        '(e.g. 20180907-1739), default: None')
 
