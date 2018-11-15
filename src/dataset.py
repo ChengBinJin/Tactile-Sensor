@@ -43,9 +43,9 @@ class DataLoader(object):
         self.val_right_img_paths = utils.all_files_under(
             os.path.join('../data', 'val'+dataset_path[-2:]), extension=extension, prefix='right')
         self.test_left_img_paths = utils.all_files_under(
-            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='left')
+            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='left'+self.flags.test_idx)
         self.test_right_img_paths = utils.all_files_under(
-            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='right')
+            os.path.join('../data', 'test'+dataset_path[-2:]), extension=extension, prefix='right'+self.flags.test_idx)
 
         # self.seed = 123  # random seed to fix random split train and validation data
         # self.percentage = 0.04  # percentage used for validation data
@@ -151,10 +151,10 @@ class DataLoader(object):
     def next_batch_val(self, idx):
         # imgs_idx = np.random.randint(low=0, high=self.num_vals, size=self.flags.batch_size)
         # imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
-        if idx < int(np.floor(self.num_tests / self.flags.batch_size)):
+        if idx < int(np.floor(self.num_vals / self.flags.batch_size)):
             imgs_idx = np.arange(idx*self.flags.batch_size, (idx+1)*self.flags.batch_size)
         else:
-            imgs_idx = np.arange(self.num_tests - (self.num_tests % self.flags.batch_size), self.num_tests)
+            imgs_idx = np.arange(self.num_vals - (self.num_vals % self.flags.batch_size), self.num_vals)
 
         left_imgs = [utils.load_data(self.val_left_img_paths[idx], img_size=self.img_size, is_gray_scale=True,
                                      is_crop=self.flags.is_crop, mode=self.flags.mode) for idx in imgs_idx]

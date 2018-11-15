@@ -7,6 +7,7 @@ import numpy as np
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--dataset', type=str, default='train03', help='dataset for train03 or train04')
 parser.add_argument('--is_check_read', type=bool, default=False, help='check path and gt correct or not')
+
 args = parser.parse_args()
 
 num_regress = 7
@@ -16,11 +17,11 @@ save_path = None
 def main():
     model_name, mode = None, 1
     if args.dataset == 'train03':
-        model_name = '20181111-0839'
+        model_name = '20181113-0737'
+        mode = 3
     elif args.dataset == 'train04':
         model_name = '20181111-1216'
-    else:
-        raise NotImplementedError
+        mode = 1
 
     filename = '{}_mode{}'.format(args.dataset, str(mode))
     global save_path
@@ -120,14 +121,10 @@ def eval05(gts_arr, preds_arr, img_paths):
     print(' [*] Run eval05 function...')
 
     filter_gts, filter_preds, filter_img_paths = [], [], []
+    dis_inter = 3
     for idx, img_path in enumerate(img_paths):
         # select X or Y is 0
-        if (
-                gts_arr[idx, 0] == -6. and gts_arr[idx, 1] == -6.) or (
-                gts_arr[idx, 0] == -6. and gts_arr[idx, 1] == 6.) or (
-                gts_arr[idx, 0] == 6. and gts_arr[idx, 1] == -6.) or (
-                gts_arr[idx, 0] == 6. and gts_arr[idx, 1] == 6.
-        ):
+        if np.mod(np.abs(int(gts_arr[idx, 0])), dis_inter) == 0 or np.mod(np.abs(int(gts_arr[idx, 1])), dis_inter) == 0:
             filter_gts.append(gts_arr[idx, :2])
             filter_preds.append(preds_arr[idx, :2])
             filter_img_paths.append(img_path)
@@ -156,11 +153,10 @@ def eval05(gts_arr, preds_arr, img_paths):
 
 def eval06(gts_arr, preds_arr, img_paths):
     print(' [*] Run eval06 function...')
-
     filter_gts, filter_preds, filter_img_paths = [], [], []
     for idx, img_path in enumerate(img_paths):
         # select X and Y are zero
-        if gts_arr[idx, 0] == 0. and gts_arr[idx, 1] == 0.:
+        if ('left1' in img_path) and gts_arr[idx, 0] == 0. and gts_arr[idx, 1] == 0.:
             filter_gts.append(gts_arr[idx, 5])
             filter_preds.append(preds_arr[idx, 5])
             filter_img_paths.append(img_path)
@@ -174,16 +170,26 @@ def eval06(gts_arr, preds_arr, img_paths):
             print('filter_gt: {}'.format(filter_gts_arr[idx]))
             print('filter_pred: {}'.format(filter_preds_arr[idx]))
 
-    # calculate l2 error and average error
-    l2_error = np.sqrt(np.square(filter_preds_arr - filter_gts_arr))
-    avg_error = np.mean(l2_error, axis=0)
+    num_tries = 10
+    num_exams = 10
+    for idx in range(num_tries):
+        preds_arr_part = filter_preds_arr[num_exams*idx:num_exams*(idx+1)]
+        gts_arr_part = filter_gts_arr[num_exams*idx:num_exams*(idx+1)]
+        img_paths_part = filter_img_paths[num_exams*idx:num_exams*(idx+1)]
 
-    data_list = [('preds', filter_preds_arr), ('gts', filter_gts_arr), ('l2_error', l2_error)]
-    attributes = ['No', 'Name', 'F']
-    num_tests = filter_gts_arr.shape[0]
-    file_name = os.path.join(save_path, 'eval06.xlsx')
+        # calculate l2 error and average error
+        l2_error = np.sqrt(np.square(preds_arr_part - gts_arr_part))
+        max_error = np.max(l2_error)
+        max_force = np.max(gts_arr_part)
+        FSO = max_error / max_force
 
-    write_to_csv(filter_img_paths, data_list, attributes, avg_error, num_tests, file_name)
+        data_list = [('preds', preds_arr_part), ('gts', gts_arr_part), ('l2_error', l2_error)]
+        attributes = ['No', 'Name', 'F']
+        num_tests = gts_arr_part.shape[0]
+        file_name = os.path.join(save_path, 'eval06_'+str(idx)+'.xlsx')
+
+        write_to_csv(img_paths_part, data_list, attributes, FSO, num_tests, file_name, is_average_error=False)
+
     print(' [!] Finish to read eval06!')
 
 
@@ -220,7 +226,7 @@ def eval_09_10_11(gts_arr, preds_arr, img_paths):
     print(' [!] Finish to read eval_09_10_11!')
 
 
-def write_to_csv(img_paths, data_list, attributes, avg_error, num_tests, file_name):
+def write_to_csv(img_paths, data_list, attributes, avg_error, num_tests, file_name, is_average_error=True):
     # Create a workbook and add a worksheet
     workbook = xlsxwriter.Workbook(file_name)
     xlsFormat = workbook.add_format()
@@ -246,12 +252,18 @@ def write_to_csv(img_paths, data_list, attributes, avg_error, num_tests, file_na
 
         # write average error
         if file_name == 'l2_error':
-            worksheet.write(num_tests + 1, 1, 'average error', xlsFormat)
+            if is_average_error:
+                worksheet.write(num_tests + 1, 1, 'average error', xlsFormat)
+            else:
+                worksheet.write(num_tests + 1, 1, 'FSO', xlsFormat)
+
             for attr_idx in range(len(attributes) - 2):
                 if isinstance(avg_error, np.ndarray):
                     worksheet.write(num_tests + 1, attr_idx + 2, avg_error[attr_idx], xlsFormat)
                 else:  # if avg_error is a scalar
                     worksheet.write(num_tests + 1, attr_idx + 2, avg_error, xlsFormat)
+
+    workbook.close()
 
 
 if __name__ == '__main__':

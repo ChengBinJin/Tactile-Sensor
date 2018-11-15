@@ -30,6 +30,8 @@ tf.flags.DEFINE_integer('eval_freq', 500, 'evalue performance at test set, defau
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model taht you wish to continue training '
                        '(e.g. 20180907-1739), default: None')
 
+tf.flags.DEFINE_string('test_idx', '', 'default: ''')
+
 
 def main(_):
     os.environ['CUDA_VISIBLE_DEVICES'] = FLAGS.gpu_index

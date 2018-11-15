@@ -157,8 +157,8 @@ class Solver(object):
         print(' [*] Evaluate...')
         preds_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
         gts_total = np.zeros((self.dataset.num_tests, self.flags.num_regress), dtype=np.float32)
-        # num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
-        num_idxs = self.dataset.num_tests
+        num_idxs = int(np.ceil(self.dataset.num_tests / self.flags.batch_size))
+        # num_idxs = self.dataset.num_tests
 
         total_pt = 0.
         num_skips = 5
@@ -177,10 +177,7 @@ class Solver(object):
             gts_total[idx*self.flags.batch_size:idx*self.flags.batch_size+gts.shape[0], :] = gts
 
         unnorm_preds_total = self.dataset.un_normalize(preds_total)  # un-normalize predicts
-        # errors = np.sqrt(np.square(unnorm_preds_total - gts_total))
-        # print('errors shape: {}'.format(errors.shape))
-
-        print(' [*] Avg. processing time: {:.3f} ms.'.format(total_pt / self.dataset.num_tests * 1000))
+        # print(' [*] Avg. processing time: {:.3f} ms.'.format(total_pt / self.dataset.num_tests * 1000))
 
         self.write_to_csv(unnorm_preds_total, gts_total)  # write to xlsx file
 
@@ -208,7 +205,7 @@ class Solver(object):
                     if attr_idx == 0:
                         worksheet.write(idx+1, attr_idx, str(idx).zfill(3), xlsFormat)
                     elif attr_idx == 1:
-                        worksheet.write(idx+1, attr_idx, self.dataset.test_left_paths[idx], xlsFormat)
+                        worksheet.write(idx+1, attr_idx, self.dataset.test_left_img_paths[idx], xlsFormat)
                     else:
                         worksheet.write(idx + 1, attr_idx, data[idx, attr_idx - 2], xlsFormat)
 
