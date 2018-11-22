@@ -11,20 +11,23 @@ from solver import Solver
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
-tf.flags.DEFINE_integer('batch_size', 16, 'batch size, default: 16')
+tf.flags.DEFINE_integer('batch_size', 4, 'batch size, default: 16')
 tf.flags.DEFINE_float('resize_ratio', 0.5, 'resie ratio for originam image, default: 0.5')
 tf.flags.DEFINE_float('dropout_ratio', 0.9, 'dropout ratio, default: 0.9')
 tf.flags.DEFINE_integer('num_regress', 7, 'number of regresion, default: 7')
 
 # 0: left img; 1: both imgs; 2: left circ img; 3: both circ imgs.
-tf.flags.DEFINE_integer('mode', 1, 'input data type [0, 1, 2 ,3], default: 1')
-tf.flags.DEFINE_string('dataset', 'train03', 'dataset name [train01, train02, train03, train04], default: train03')
+tf.flags.DEFINE_integer('mode', 3, 'input data type [0, 1, 2 ,3], default: 1')
+# train01: XY of the thin-sensor
+# train02: Rotation of the thin-sensor
+# trian03: XY of the thick-sensor
+tf.flags.DEFINE_string('dataset', 'train01', 'dataset name [train01, train02, train03], default: train01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_bool('is_crop', True, 'crop input image, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for Adam, default: 0.001')
 tf.flags.DEFINE_float('weight_decay', 1e-5, 'hyper-parameter for regularization term, default: 0.0001')
 
-tf.flags.DEFINE_integer('iters', 100000, 'number of iterations, default: 100000')
+tf.flags.DEFINE_integer('iters', 2, 'number of iterations, default: 100000')
 tf.flags.DEFINE_integer('print_freq', 10, 'print frequency for loss, default: 10')
 tf.flags.DEFINE_integer('eval_freq', 500, 'evalue performance at test set, default: 500')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model taht you wish to continue training '
