@@ -5,7 +5,9 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
+import cv2
 import logging
+import numpy as np
 from datetime import datetime
 import tensorflow as tf
 
@@ -30,29 +32,29 @@ tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish 
 
 def print_main_parameters(logger, flags):
     if flags.is_train:
-        logger.info('gpu_index: \t\t\t{}'.format(flags.gpu_index))
-        logger.info('mode: \t\t\t{}'.format(flags.mode))
-        logger.info('batch_size: \t\t\t{}'.format(flags.batch_size))
-        logger.info('resize_factor: \t\t{}'.format(flags.resize_factor))
-        logger.info('data: \t\t\t{}'.format(flags.data))
-        logger.info('is_train: \t\t\t{}'.format(flags.is_train))
-        logger.info('learning_rate: \t\t{}'.format(flags.learning_rate))
-        logger.info('weight_decay: \t\t{}'.format(flags.weight_decay))
-        logger.info('epoch: \t\t\t{}'.format(flags.epoch))
-        logger.info('print_freq: \t\t\t{}'.format(flags.print_freq))
-        logger.info('load_model: \t\t\t{}'.format(flags.load_model))
+        logger.info('gpu_index: \t\t{}'.format(flags.gpu_index))
+        logger.info('mode: \t\t{}'.format(flags.mode))
+        logger.info('batch_size: \t\t{}'.format(flags.batch_size))
+        logger.info('resize_factor: \t{}'.format(flags.resize_factor))
+        logger.info('data: \t\t{}'.format(flags.data))
+        logger.info('is_train: \t\t{}'.format(flags.is_train))
+        logger.info('learning_rate: \t{}'.format(flags.learning_rate))
+        logger.info('weight_decay: \t{}'.format(flags.weight_decay))
+        logger.info('epoch: \t\t{}'.format(flags.epoch))
+        logger.info('print_freq: \t\t{}'.format(flags.print_freq))
+        logger.info('load_model: \t\t{}'.format(flags.load_model))
     else:
-        print('-- gpu_index: \t\t\t{}'.format(flags.gpu_index))
-        print('-- mode: \t\t\t{}'.format(flags.mode))
-        print('-- batch_size: \t\t\t{}'.format(flags.batch_size))
-        print('-- resize_factor: \t\t{}'.format(flags.resize_factor))
-        print('-- data: \t\t\t{}'.format(flags.data))
-        print('-- is_train: \t\t\t{}'.format(flags.is_train))
-        print('-- learning_rate: \t\t{}'.format(flags.learning_rate))
-        print('-- weight_decay: \t\t{}'.format(flags.weight_decay))
-        print('-- epoch: \t\t\t{}'.format(flags.epoch))
-        print('-- print_freq: \t\t\t{}'.format(flags.print_freq))
-        print('-- load_model: \t\t\t{}'.format(flags.load_model))
+        print('-- gpu_index: \t\t{}'.format(flags.gpu_index))
+        print('-- mode: \t\t{}'.format(flags.mode))
+        print('-- batch_size: \t\t{}'.format(flags.batch_size))
+        print('-- resize_factor: \t{}'.format(flags.resize_factor))
+        print('-- data: \t\t{}'.format(flags.data))
+        print('-- is_train: \t\t{}'.format(flags.is_train))
+        print('-- learning_rate: \t{}'.format(flags.learning_rate))
+        print('-- weight_decay: \t{}'.format(flags.weight_decay))
+        print('-- epoch: \t\t{}'.format(flags.epoch))
+        print('-- print_freq: \t\t{}'.format(flags.print_freq))
+        print('-- load_model: \t\t{}'.format(flags.load_model))
 
 
 def main(_):
@@ -73,8 +75,25 @@ def main(_):
     print_main_parameters(logger, flags=FLAGS)
 
     # Initialize dataset
-    data = Dataset(data=FLAGS.data, is_train=FLAGS.is_train, log_dir=log_dir)
+    data = Dataset(data=FLAGS.data,
+                   mode=FLAGS.mode,
+                   resize_factor=FLAGS.resize_factor,
+                   is_train=FLAGS.is_train,
+                   log_dir=log_dir,
+                   is_debug=False)
 
+    imgs = data.train_random_batch(batch_size=4)
+    print('imgs shape: {}'.format(imgs.shape))
+
+    num_imgs, h, w, c = imgs.shape
+
+    for i in range(num_imgs):
+        left_img, right_img = imgs[i, :, :, 0], imgs[i, :, :, 1]
+        canvas = np.hstack([left_img, right_img])
+
+        cv2.imshow('Canvas', canvas.astype(np.uint8))
+        if cv2.waitKey(0) & 0xFF == 27:
+            exit('Esc clicked!')
 
 if __name__ == '__main__':
     tf.compat.v1.app.run()
