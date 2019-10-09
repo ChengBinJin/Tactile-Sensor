@@ -7,6 +7,7 @@
 # --------------------------------------------------------------------------
 import os
 import logging
+import numpy as np
 
 
 def make_folders_simple(cur_time=None, subfolder=''):
@@ -58,3 +59,15 @@ def all_files_under(folder, subfolder=None, endswith='.png', condition='L_'):
         return sorted(file_names)
     else:
         return []
+
+
+def read_label(img_path):
+    X = float(img_path[img_path.find('_X') + 2:img_path.find('_Y')])
+    Y = float(img_path[img_path.find('_Y') + 2:img_path.find('_Z')])
+    Ra = float(img_path[img_path.find('_Ra') + 3:img_path.find('_Rb')])
+    Rb = float(img_path[img_path.find('_Rb') + 3:img_path.find('_F')])
+    F = float(img_path[img_path.find('_F') + 2:img_path.find('_D')])
+    D = float(img_path[img_path.find('_D') + 2:img_path.find('.jpg')])
+
+    return np.asarray([X, Y, Ra, Rb, F, D])
+

@@ -12,7 +12,7 @@ import utils as utils
 
 
 class Dataset(object):
-    def __init__(self, data, mode=0, resize_factor=0.5, is_train=True, log_dir=None, is_debug=False):
+    def __init__(self, data, mode=0, resize_factor=0.5, num_attribute=6, is_train=True, log_dir=None, is_debug=False):
         self.data= data
         self.mode = mode
         self.resize_factor = resize_factor
@@ -24,15 +24,22 @@ class Dataset(object):
         self.binarize_threshold = 127.5
         self.input_shape = (int(np.floor(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.floor(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))), 2)
+        self.num_atrribute = num_attribute
+        self.small_value = 1e-7
+
+        self.logger = logging.getLogger(__name__)  # logger
+        self.logger.setLevel(logging.INFO)
+        utils.init_logger(logger=self.logger, log_dir=log_dir, is_train=is_train, name='rg_dataset')
 
         self._read_min_max_info()   # read min and max values from the .npy file
         self._read_img_path()       # read all img paths
 
-        if self.is_train:
-            self.logger = logging.getLogger(__name__)  # logger
-            self.logger.setLevel(logging.INFO)
-            utils.init_logger(logger=self.logger, log_dir=log_dir, is_train=is_train, name='rg_dataset')
+        self.print_parameters()
+        if self.is_debug:
+            self._debug_roi_test()
 
+    def print_parameters(self):
+        if self.is_train:
             self.logger.info('Data: \t\trg_train{}'.format(self.data))
             self.logger.info('Mode: \t\t{}'.format(self.mode))
             self.logger.info('resize_factor: \t{}'.format(self.resize_factor))
@@ -42,7 +49,9 @@ class Dataset(object):
             self.logger.info('bottom_right: \t{}'.format(self.bottom_right))
             self.logger.info('binarize_threshold: \t{}'.format(self.binarize_threshold))
             self.logger.info('Num. of imgs: \t{}'.format(self.num_train))
-            self.logger.info('input_shape: \t\t{}'.format(self.input_shape))
+            self.logger.info('input_shape: \t{}'.format(self.input_shape))
+            self.logger.info('Num. of attributes: \t{}'.format(self.num_atrribute))
+            self.logger.info('Small value: \t{}'.format(self.small_value))
             self.logger.info('X min: \t\t{:.3f}'.format(self.x_min))
             self.logger.info('X max: \t\t{:.3f}'.format(self.x_max))
             self.logger.info('Y min: \t\t{:.3f}'.format(self.y_min))
@@ -65,7 +74,9 @@ class Dataset(object):
             print('bottom_right: \t{}'.format(self.bottom_right))
             print('binarize_threshold: \t{}'.format(self.binarize_threshold))
             print('Num. of imgs: \t{}'.format(self.num_train))
-            print('input_shape: \t\t{}'.format(self.input_shape))
+            print('input_shape: \t{}'.format(self.input_shape))
+            print('Num. of attributes: \t{}'.format(self.num_atrribute))
+            print('Small value: \t{}'.format(self.small_value))
             print('X min: \t\t{:.3f}'.format(self.x_min))
             print('X max: \t\t{:.3f}'.format(self.x_max))
             print('Y min: \t\t{:.3f}'.format(self.y_min))
@@ -78,9 +89,6 @@ class Dataset(object):
             print('F max: \t\t{:.3f}'.format(self.f_max))
             print('D min: \t\t{:.3f}'.format(self.d_min))
             print('D max: \t\t{:.3f}'.format(self.d_max))
-
-        if self.is_debug:
-            self._debug_roi_test()
 
     def _debug_roi_test(self, batch_size=4, color=(0, 0, 255), thickness=2, save_folder='../debug'):
         if not os.path.isdir(save_folder):
@@ -124,7 +132,6 @@ class Dataset(object):
             cv2.imwrite(os.path.join(save_folder, 'gray_' + os.path.basename(left_path)), gray_canvas)
             cv2.imwrite(os.path.join(save_folder, 'resize_' + os.path.basename(left_path)), resize_canvas)
 
-
     def _read_min_max_info(self):
         min_max_data = np.load(os.path.join('../data', 'rg_train' + self.data + '.npy'))
         self.x_min = min_max_data[0]
@@ -140,6 +147,9 @@ class Dataset(object):
         self.d_min = min_max_data[10]
         self.d_max = min_max_data[11]
 
+        self.min_values = np.asarray([self.x_min, self.y_min, self.ra_min, self.rb_min, self.f_min, self.d_min])
+        self.max_values = np.asarray([self.x_max, self.y_max, self.ra_max, self.rb_max, self.f_max, self.d_max])
+
     def _read_img_path(self):
         self.left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
                                                     endswith='.jpg',
@@ -153,12 +163,15 @@ class Dataset(object):
 
     def train_random_batch(self, batch_size=4):
         batch_imgs = np.zeros((batch_size, *self.input_shape), dtype=np.float32)
-        indexes = np.random.random_integers(low=0, high=self.num_train, size=batch_size)
+        batch_labels = np.zeros((batch_size, self.num_atrribute), dtype=np.float32)
+
+        indexes = np.random.random_integers(low=0, high=self.num_train-1, size=batch_size)
 
         left_img_paths = [self.left_img_paths[index] for index in indexes]
         right_img_paths = [self.right_img_paths[index] for index in indexes]
 
         for i, (left_path, right_path) in enumerate(zip(left_img_paths, right_img_paths)):
+            # Process imgs
             left_img = cv2.imread(left_path)
             right_img = cv2.imread(right_path)
 
@@ -176,4 +189,16 @@ class Dataset(object):
 
             batch_imgs[i, :] = np.dstack([left_img_resize, right_img_resize])
 
-        return batch_imgs
+            # Process labels
+            batch_labels[i, :] = utils.read_label(left_path)
+
+        # Normalize labels
+        batch_labels = self.normalize(batch_labels)
+
+        return batch_imgs, batch_labels
+
+    def normalize(self, data):
+        return (data - self.min_values) / (self.max_values - self.min_values + self.small_value)
+
+    def unnormalize(self, data):
+        return data * (self.max_values - self.min_values + self.small_value) + self.min_values
