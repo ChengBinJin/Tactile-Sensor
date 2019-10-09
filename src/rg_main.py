@@ -5,7 +5,6 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
-# import cv2
 import logging
 import numpy as np
 from datetime import datetime
@@ -28,7 +27,7 @@ tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: Tru
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-5, 'weight decay for model to handle overfitting, defautl: 0.00001')
 tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
-tf.flags.DEFINE_integer('print_freq', 5, 'print frequence for loss information, default: 5')
+tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 5')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
 
@@ -138,12 +137,10 @@ def train(solver, saver, logger, model_dir, log_dir):
             tb_writer.flush()
 
         # TODO: Evalue models using validation dataset
-        # if (iter_time % eval_iters == 0) or (iter_time + 1 == total_iters):
-        #     save_model(saver, solver, logger, model_dir, iter_time)
+        if (iter_time % eval_iters == 0) or (iter_time + 1 == total_iters):
+            save_model(saver, solver, logger, model_dir, iter_time)
 
         iter_time += 1
-
-    save_model(saver, solver, logger, model_dir, iter_time)
 
 
 def test(solver, saver, model_dir, log_dir):

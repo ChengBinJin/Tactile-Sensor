@@ -46,7 +46,7 @@ class ResNet18(object):
         self.preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
 
         # Data loss
-        self.data_loss = tf.math.reduce_mean(tf.nn.l2_loss(self.preds - self.gt_tfph))
+        self.data_loss = tf.compat.v1.losses.mean_squared_error(predictions=self.preds, labels=self.gt_tfph)
         # Regularization term
         variables = self.get_regularization_variables()
         self.reg_term = self.weight_decay * tf.math.reduce_mean([tf.nn.l2_loss(variable) for variable in variables])
@@ -113,7 +113,7 @@ class ResNet18(object):
 
             inputs = tf_utils.flatten(inputs, name='flatten', logger=self.logger)
 
-            # inputs = tf_utils.linear(inputs, 512, name='FC1')
+            inputs = tf_utils.linear(inputs, 512, name='FC1')
             logits = tf_utils.linear(inputs, self.num_attribute, name='FC2')
 
             return logits
