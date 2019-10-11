@@ -17,8 +17,8 @@ class ResNet18(object):
         self.num_attribute = num_attribute
         self.name = name
         self.layers = [2, 2, 2, 2]
-        # Initialize session
-        self.sess = tf.compat.v1.Session()
+        self.small_value = 1e-7
+        self.sess = tf.compat.v1.Session()  # Initialize session
 
         # Model should be fixed in here
         self.model_dir = '../model/20191009-213543'
@@ -41,14 +41,14 @@ class ResNet18(object):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape])
 
         # Network forward for training
-        preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
+        preds = self.forward_network(input_img=self.normalize_img(self.img_tfph), reuse=False)
         self.preds = tf.math.maximum(x=tf.zeros_like(preds, dtype=tf.dtypes.float32), y=preds)
 
     def predict(self, left_img, right_img):
         # Preprocessing
         pre_img = self.preprocessing(left_img, right_img)
         output = self.sess.run(self.preds, feed_dict={self.img_tfph: np.expand_dims(pre_img, axis=0)})
-        return output
+        return self.unnormalize_prediction(output[0])
 
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
@@ -125,8 +125,11 @@ class ResNet18(object):
         return inputs
 
     @staticmethod
-    def normalize(data):
+    def normalize_img(data):
         return data - 127.5
+
+    def unnormalize_prediction(self, data):
+        return data * (self.max_values - self.min_values + self.small_value) + self.min_values
 
     @staticmethod
     def preprocessing(left_img, right_img, top_left=(20, 90), bottom_right = (390, 575), resize_factor=0.5):
@@ -194,16 +197,16 @@ def main(left_path, right_path):
     pred = model.predict(left_img=left_img, right_img=right_img)
 
     print('\nPrediction!')
-    print('X:  {:.2f}'.format(pred[0, 0]))
-    print('Y:  {:.2f}'.format(pred[0, 1]))
-    print('Ra: {:.2f}'.format(pred[0, 2]))
-    print('Rb: {:.2f}'.format(pred[0, 3]))
-    print('F:  {:.2f}'.format(pred[0, 4]))
-    print('D:  {:.2f}'.format(pred[0, 5]))
+    print('X:  {:.2f}'.format(pred[0]))
+    print('Y:  {:.2f}'.format(pred[1]))
+    print('Ra: {:.2f}'.format(pred[2]))
+    print('Rb: {:.2f}'.format(pred[3]))
+    print('F:  {:.2f}'.format(pred[4]))
+    print('D:  {:.2f}'.format(pred[5]))
 
 
 if __name__ == '__main__':
-    left_img_path = '../data/rg_train01/A1_L_X-0.500_Y-0.500_Z-0.153_Ra0.000_Rb0.000_F0.610_D0.742.jpg'
-    right_img_path = '../data/rg_train01/B1_R_X-0.500_Y-0.500_Z-0.153_Ra0.000_Rb0.000_F0.610_D0.742.jpg'
+    left_img_path = '../data/rg_train01/A1_L_X0.500_Y-0.500_Z-0.140_Ra0.000_Rb0.000_F0.120_D0.065.jpg'
+    right_img_path = '../data/rg_train01/B1_R_X0.500_Y-0.500_Z-0.140_Ra0.000_Rb0.000_F0.120_D0.065.jpg'
 
     main(left_img_path, right_img_path)
