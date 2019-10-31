@@ -11,12 +11,13 @@ import utils as utils
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--data', dest='data', type=str, default='01', help='select data folder')
+parser.add_argument('--format', dest='format', type=str, default='.png', help='decide image data format')
 args = parser.parse_args()
 
 
 def main(data_id, num_attri=6):
     data_folder = os.path.join('../data', 'rg_train' + data_id)
-    left_img_paths = utils.all_files_under(folder=data_folder, endswith='.jpg', condition='L_')
+    left_img_paths = utils.all_files_under(folder=data_folder, endswith=args.format, condition='L_')
 
     num_imgs = len(left_img_paths)
     data = np.zeros((num_imgs, num_attri), dtype=np.float32)
@@ -28,7 +29,7 @@ def main(data_id, num_attri=6):
         Ra = float(img_path[img_path.find('_Ra')+3:img_path.find('_Rb')])
         Rb = float(img_path[img_path.find('_Rb')+3:img_path.find('_F')])
         F = float(img_path[img_path.find('_F')+2:img_path.find('_D')])
-        D = float(img_path[img_path.find('_D')+2:img_path.find('.jpg')])
+        D = float(img_path[img_path.find('_D')+2:img_path.find(args.format)])
         data[i, :] = np.asarray([X, Y, Ra, Rb, F, D])
 
     for i in range(num_attri):

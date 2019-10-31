@@ -12,16 +12,18 @@ import utils as utils
 
 
 class Dataset(object):
-    def __init__(self, data, mode=0, resize_factor=0.5, num_attribute=6, is_train=True, log_dir=None, is_debug=False):
+    def __init__(self, data, mode=0, img_format='.png', resize_factor=0.5, num_attribute=6, is_train=True,
+                 log_dir=None, is_debug=False):
         self.data= data
         self.mode = mode
+        self.img_format = img_format
         self.resize_factor = resize_factor
         self.is_train = is_train
         self.log_dir = log_dir
         self.is_debug = is_debug
         self.top_left = (20, 90)
         self.bottom_right = (390, 575)
-        self.binarize_threshold = 127.5
+        self.binarize_threshold = 20.
         self.input_shape = (int(np.floor(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.floor(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))), 2)
         self.num_atrribute = num_attribute
@@ -40,8 +42,10 @@ class Dataset(object):
 
     def print_parameters(self):
         if self.is_train:
+            self.logger.info('\nDataset parameters:')
             self.logger.info('Data: \t\trg_train{}'.format(self.data))
             self.logger.info('Mode: \t\t{}'.format(self.mode))
+            self.logger.info('img_format: \t\t{}'.format(self.img_format))
             self.logger.info('resize_factor: \t{}'.format(self.resize_factor))
             self.logger.info('is_train: \t\t{}'.format(self.is_train))
             self.logger.info('is_debug: \t\t{}'.format(self.is_debug))
@@ -65,8 +69,10 @@ class Dataset(object):
             self.logger.info('D min: \t\t{:.3f}'.format(self.d_min))
             self.logger.info('D max: \t\t{:.3f}'.format(self.d_max))
         else:
+            print('Dataset parameters:')
             print('Data: \t\trg_train{}'.format(self.data))
             print('Mode: \t\t{}'.format(self.mode))
+            print('img_format: \t\t{}'.format(self.img_format))
             print('resize_factor: \t{}'.format(self.resize_factor))
             print('is_train: \t\t{}'.format(self.is_train))
             print('is_debug: \t\t{}'.format(self.is_debug))
@@ -90,7 +96,7 @@ class Dataset(object):
             print('D min: \t\t{:.3f}'.format(self.d_min))
             print('D max: \t\t{:.3f}'.format(self.d_max))
 
-    def _debug_roi_test(self, batch_size=4, color=(0, 0, 255), thickness=2, save_folder='../debug'):
+    def _debug_roi_test(self, batch_size=8, color=(0, 0, 255), thickness=2, save_folder='../debug'):
         if not os.path.isdir(save_folder):
             os.makedirs(save_folder)
 
@@ -117,20 +123,40 @@ class Dataset(object):
             left_img_gray = cv2.cvtColor(left_img_crop, cv2.COLOR_BGR2GRAY)
             right_img_gray = cv2.cvtColor(right_img_crop, cv2.COLOR_BGR2GRAY)
 
+            # Thresholding
+            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+
+            # # Closing: dilation and erosion
+            # kernel = np.ones((3, 3), np.float32)
+            # left_img_close = cv2.morphologyEx(left_img_binary, cv2.MORPH_CLOSE, kernel)
+            # right_img_close = cv2.morphologyEx(right_img_binary, cv2.MORPH_CLOSE, kernel)
+            #
+            # # Opening: erosion and dilation
+            # kernel = np.ones((5, 5), np.float32)
+            # left_img_open = cv2.morphologyEx(left_img_close, cv2.MORPH_OPEN, kernel)
+            # right_img_open = cv2.morphologyEx(right_img_close, cv2.MORPH_OPEN, kernel)
+
             # Resize img
-            left_img_resize = cv2.resize(left_img_gray, None, fx=self.resize_factor, fy=self.resize_factor)
-            right_img_resize = cv2.resize(right_img_gray, None, fx=self.resize_factor, fy=self.resize_factor)
+            left_img_resize = cv2.resize(left_img_binary , None, fx=self.resize_factor, fy=self.resize_factor)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
 
             roi_canvas = np.hstack([left_img_roi, right_img_roi])
             crop_canvas = np.hstack([left_img_crop, right_img_crop])
             gray_canvas = np.hstack([left_img_gray, right_img_gray])
+            binary_canvas = np.hstack([left_img_binary, right_img_binary])
+            # close_canvas = np.hstack([left_img_close, right_img_close])
+            # open_canvas = np.hstack([left_img_open, right_img_open])
             resize_canvas = np.hstack([left_img_resize, right_img_resize])
 
             # Save img
-            cv2.imwrite(os.path.join(save_folder, 'roi_' + os.path.basename(left_path)), roi_canvas)
-            cv2.imwrite(os.path.join(save_folder, 'crop_' + os.path.basename(left_path)), crop_canvas)
-            cv2.imwrite(os.path.join(save_folder, 'gray_' + os.path.basename(left_path)), gray_canvas)
-            cv2.imwrite(os.path.join(save_folder, 'resize_' + os.path.basename(left_path)), resize_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's1_roi_' + os.path.basename(left_path)), roi_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's2_crop_' + os.path.basename(left_path)), crop_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's3_gray_' + os.path.basename(left_path)), gray_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's4_binary_' + os.path.basename(left_path)), binary_canvas)
+            # cv2.imwrite(os.path.join(save_folder, 's5_close_' + os.path.basename(left_path)), close_canvas)
+            # cv2.imwrite(os.path.join(save_folder, 's6_open_' + os.path.basename(left_path)), open_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's5_resize_' + os.path.basename(left_path)), resize_canvas)
 
     def _read_min_max_info(self):
         min_max_data = np.load(os.path.join('../data', 'rg_train' + self.data + '.npy'))
@@ -152,10 +178,10 @@ class Dataset(object):
 
     def _read_img_path(self):
         self.left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
-                                                    endswith='.jpg',
+                                                    endswith=self.img_format,
                                                     condition='L_')
         self.right_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
-                                                     endswith='.jpg',
+                                                     endswith=self.img_format,
                                                      condition='R_')
 
         assert len(self.left_img_paths) == len(self.right_img_paths)
@@ -183,9 +209,13 @@ class Dataset(object):
             left_img_gray = cv2.cvtColor(left_img_crop, cv2.COLOR_BGR2GRAY)
             right_img_gray = cv2.cvtColor(right_img_crop, cv2.COLOR_BGR2GRAY)
 
-            # Stage 3: Resize img
-            left_img_resize = cv2.resize(left_img_gray, None, fx=self.resize_factor, fy=self.resize_factor)
-            right_img_resize = cv2.resize(right_img_gray, None, fx=self.resize_factor, fy=self.resize_factor)
+            # Stage 3: Thresholding
+            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+
+            # Stage 4: Resize img
+            left_img_resize = cv2.resize(left_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
 
             batch_imgs[i, :] = np.dstack([left_img_resize, right_img_resize])
 

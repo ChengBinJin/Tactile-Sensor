@@ -19,8 +19,9 @@ import utils as utils
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
+tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .png')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 16, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
 tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
@@ -34,8 +35,10 @@ tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish 
 
 def print_main_parameters(logger, flags):
     if flags.is_train:
+        logger.info('\nmain func parameters:')
         logger.info('gpu_index: \t\t{}'.format(flags.gpu_index))
         logger.info('mode: \t\t{}'.format(flags.mode))
+        logger.info('img_format: \t\t{}'.format(flags.img_format))
         logger.info('use_batchnorm: \t{}'.format(flags.use_batchnorm))
         logger.info('batch_size: \t\t{}'.format(flags.batch_size))
         logger.info('resize_factor: \t{}'.format(flags.resize_factor))
@@ -47,8 +50,10 @@ def print_main_parameters(logger, flags):
         logger.info('print_freq: \t\t{}'.format(flags.print_freq))
         logger.info('load_model: \t\t{}'.format(flags.load_model))
     else:
+        print('main func parameters:')
         print('-- gpu_index: \t\t{}'.format(flags.gpu_index))
         print('-- mode: \t\t{}'.format(flags.mode))
+        print('-- format: \t\t{}'.format(flags.img_format))
         print('-- use_batchnorm: \t{}'.format(flags.use_batchnorm))
         print('-- batch_size: \t\t{}'.format(flags.batch_size))
         print('-- resize_factor: \t{}'.format(flags.resize_factor))
@@ -81,31 +86,32 @@ def main(_):
     # Initialize dataset
     data = Dataset(data=FLAGS.data,
                    mode=FLAGS.mode,
+                   img_format=FLAGS.img_format,
                    resize_factor=FLAGS.resize_factor,
-                   num_attribute=6, # X, Y, Ra, Rb, F, D
+                   num_attribute=6,  # X, Y, Ra, Rb, F, D
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
                    is_debug=False)
 
-    # Initialize model
-    model =ResNet18(input_shape=data.input_shape,
-                    num_attribute=data.num_atrribute,
-                    use_batchnorm=FLAGS.use_batchnorm,
-                    lr=FLAGS.learning_rate,
-                    weight_decay=FLAGS.weight_decay,
-                    total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
-                    is_train=FLAGS.is_train,
-                    log_dir=log_dir)
-    # Initialize solver
-    solver = Solver(model, data)
-
-    # Initialize saver
-    saver = tf.compat.v1.train.Saver(max_to_keep=1)
-
-    if FLAGS.is_train is True:
-        train(solver, saver ,logger, model_dir, log_dir)
-    else:
-        test(solver, saver, model_dir, log_dir)
+    # # Initialize model
+    # model =ResNet18(input_shape=data.input_shape,
+    #                 num_attribute=data.num_atrribute,
+    #                 use_batchnorm=FLAGS.use_batchnorm,
+    #                 lr=FLAGS.learning_rate,
+    #                 weight_decay=FLAGS.weight_decay,
+    #                 total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
+    #                 is_train=FLAGS.is_train,
+    #                 log_dir=log_dir)
+    # # Initialize solver
+    # solver = Solver(model, data)
+    #
+    # # Initialize saver
+    # saver = tf.compat.v1.train.Saver(max_to_keep=1)
+    #
+    # if FLAGS.is_train is True:
+    #     train(solver, saver ,logger, model_dir, log_dir)
+    # else:
+    #     test(solver, saver, model_dir, log_dir)
 
 
 def train(solver, saver, logger, model_dir, log_dir):

@@ -11,8 +11,8 @@ from utils import all_files_under
 
 parse = argparse.ArgumentParser(description='sepearate_data')
 parse.add_argument('--folder', dest='folder', type=str, default='../data/Data', help='initial data you want to seperate')
-parse.add_argument('--left_pre_fix', dest='left_pre_fix', type=str, default='A2_', help='left prefix name for the image')
-parse.add_argument('--save_folder', dest='save_folder', type=str, default='../data/rg_train01', help='image saving folder')
+parse.add_argument('--left_pre_fix', dest='left_pre_fix', type=str, default='A6_', help='left prefix name for the image')
+parse.add_argument('--save_folder', dest='save_folder', type=str, default='../data/rg_test01', help='image saving folder')
 args = parse.parse_args()
 
 def main(read_folder, left_pre_fix, save_folder):
