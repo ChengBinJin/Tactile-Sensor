@@ -4,6 +4,8 @@
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
+import cv2
+import numpy as np
 import tensorflow as tf
 
 
@@ -39,3 +41,30 @@ class Solver(object):
             [train_op, total_loss_op, data_loss_op, reg_term_op, summary_op], feed_dict=feed)
 
         return total_loss, data_loss, reg_term, summary
+
+    def eval(self, batch_size=4):
+        print(' [*] Evalute on the validation dataset...')
+
+        preds_total = np.zeros((self.data.num_val, self.data.num_attribute), dtype=np.float32)
+        gts_total = np.zeros((self.data.num_val, self.data.num_attribute), dtype=np.float32)
+
+        for i, index in enumerate(range(0, self.data.num_val, batch_size)):
+            print('[{}/{}] processing...'.format(i + 1, (self.data.num_val // batch_size) + 1))
+
+            img_vals, label_vals = self.data.direct_batch(batch_size=batch_size, start_index=index, stage='val')
+            num_imgs = img_vals.shape[0]
+
+            feed = {self.model.img_tfph: img_vals,
+                    self.model.gt_tfph: label_vals}
+            unnorm_preds, unnorm_gts = self.sess.run([self.model.unnorm_preds, self.model.unnorm_gts], feed_dict=feed)
+
+            # Save unnormalized labels for using evaluation
+            preds_total[index * batch_size :index * batch_size + num_imgs] = unnorm_preds
+            gts_total[index * batch_size :index * batch_size + num_imgs] = unnorm_gts
+
+
+        avg_err, summary = self.sess.run([self.model.avg_err, self.model.eval_summary_op],
+                                         feed_dict={self.model.unnorm_preds: preds_total,
+                                                    self.model.unnorm_gts: gts_total})
+
+        return avg_err, summary

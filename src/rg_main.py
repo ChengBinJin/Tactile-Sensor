@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
+import math
 import logging
 import numpy as np
 from datetime import datetime
@@ -12,7 +13,7 @@ import tensorflow as tf
 
 from rg_dataset import Dataset
 from rg_solver import Solver
-from resnet import ResNet18
+from resnet import ResNet18_Revised
 import utils as utils
 
 
@@ -21,14 +22,14 @@ tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, d
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
 tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .png')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 16, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 64, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
 tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-5, 'weight decay for model to handle overfitting, defautl: 0.00001')
-tf.flags.DEFINE_integer('epoch', 200, 'number of epochs, default: 100')
-tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 5')
+tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
+tf.flags.DEFINE_integer('print_freq', 10, 'print frequence for loss information, default: 5')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
 
@@ -93,29 +94,32 @@ def main(_):
                    log_dir=log_dir,
                    is_debug=False)
 
-    # # Initialize model
-    # model =ResNet18(input_shape=data.input_shape,
-    #                 num_attribute=data.num_atrribute,
-    #                 use_batchnorm=FLAGS.use_batchnorm,
-    #                 lr=FLAGS.learning_rate,
-    #                 weight_decay=FLAGS.weight_decay,
-    #                 total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
-    #                 is_train=FLAGS.is_train,
-    #                 log_dir=log_dir)
-    # # Initialize solver
-    # solver = Solver(model, data)
-    #
-    # # Initialize saver
-    # saver = tf.compat.v1.train.Saver(max_to_keep=1)
-    #
-    # if FLAGS.is_train is True:
-    #     train(solver, saver ,logger, model_dir, log_dir)
-    # else:
-    #     test(solver, saver, model_dir, log_dir)
+    # Initialize model
+    model = ResNet18_Revised(input_shape=data.input_shape,
+                             min_values=data.min_values,
+                             max_values=data.max_values,
+                             num_attribute=data.num_atrribute,
+                             use_batchnorm=FLAGS.use_batchnorm,
+                             lr=FLAGS.learning_rate,
+                             weight_decay=FLAGS.weight_decay,
+                             total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
+                             is_train=FLAGS.is_train,
+                             log_dir=log_dir)
+    # Initialize solver
+    solver = Solver(model, data)
+
+    # Initialize saver
+    saver = tf.compat.v1.train.Saver(max_to_keep=1)
+
+    if FLAGS.is_train is True:
+        train(solver, saver ,logger, model_dir, log_dir)
+    else:
+        test(solver, saver, model_dir, log_dir)
 
 
 def train(solver, saver, logger, model_dir, log_dir):
-    iter_time = 0
+    best_avg_err = math.inf
+    iter_time, eval_time = 0, 0
     total_iters = int(np.ceil(FLAGS.epoch * solver.data.num_train / FLAGS.batch_size))
     eval_iters = total_iters // 100
 
@@ -142,9 +146,19 @@ def train(solver, saver, logger, model_dir, log_dir):
             tb_writer.add_summary(summary, iter_time)
             tb_writer.flush()
 
-        # TODO: Evalue models using validation dataset
         if (iter_time % eval_iters == 0) or (iter_time + 1 == total_iters):
-            save_model(saver, solver, logger, model_dir, iter_time)
+            avg_err, eval_summary = solver.eval(batch_size=FLAGS.batch_size)
+
+            # Write the summary of evaluation on tensorboard
+            tb_writer.add_summary(eval_summary, eval_time)
+            tb_writer.flush()
+
+            if avg_err < best_avg_err:
+                best_avg_err = avg_err
+                save_model(saver, solver, logger, model_dir, iter_time, best_avg_err)
+
+            print('Avg. Error: {:.5f}, Best Avg. Error: {:.5f}'.format(avg_err, best_avg_err))
+            eval_time += 1
 
         iter_time += 1
 
@@ -153,9 +167,9 @@ def test(solver, saver, model_dir, log_dir):
     print("Hello test!")
 
 
-def save_model(saver, solver, logger, model_dir, iter_time):
+def save_model(saver, solver, logger, model_dir, iter_time, best_rmse):
     saver.save(solver.sess, os.path.join(model_dir, 'model'), global_step=iter_time)
-    logger.info('[*] Model saved: Iter: {}'.format(iter_time))
+    logger.info('[*] Model saved: Iter: {}, Best rmse: {:.5f}'.format(iter_time, best_rmse))
 
 
 def load_model(saver, solver, model_dir, logger=None, is_train=False):

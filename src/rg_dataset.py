@@ -40,6 +40,7 @@ class Dataset(object):
         if self.is_debug:
             self._debug_roi_test()
 
+
     def print_parameters(self):
         if self.is_train:
             self.logger.info('\nDataset parameters:')
@@ -52,7 +53,9 @@ class Dataset(object):
             self.logger.info('top_left: \t\t{}'.format(self.top_left))
             self.logger.info('bottom_right: \t{}'.format(self.bottom_right))
             self.logger.info('binarize_threshold: \t{}'.format(self.binarize_threshold))
-            self.logger.info('Num. of imgs: \t{}'.format(self.num_train))
+            self.logger.info('Num. of train imgs: \t{}'.format(self.num_train))
+            self.logger.info('Num. of val imgs: \t{}'.format(self.num_val))
+            self.logger.info('Numo of test imgs: \t{}'.format(self.num_test))
             self.logger.info('input_shape: \t{}'.format(self.input_shape))
             self.logger.info('Num. of attributes: \t{}'.format(self.num_atrribute))
             self.logger.info('Small value: \t{}'.format(self.small_value))
@@ -79,7 +82,9 @@ class Dataset(object):
             print('top_left: \t\t{}'.format(self.top_left))
             print('bottom_right: \t{}'.format(self.bottom_right))
             print('binarize_threshold: \t{}'.format(self.binarize_threshold))
-            print('Num. of imgs: \t{}'.format(self.num_train))
+            print('Num. of train imgs: \t{}'.format(self.num_train))
+            print('Num. of val imgs: \t{}'.format(self.num_val))
+            print('Numo of test imgs: \t{}'.format(self.num_test))
             print('input_shape: \t{}'.format(self.input_shape))
             print('Num. of attributes: \t{}'.format(self.num_atrribute))
             print('Small value: \t{}'.format(self.small_value))
@@ -96,14 +101,15 @@ class Dataset(object):
             print('D min: \t\t{:.3f}'.format(self.d_min))
             print('D max: \t\t{:.3f}'.format(self.d_max))
 
+
     def _debug_roi_test(self, batch_size=8, color=(0, 0, 255), thickness=2, save_folder='../debug'):
         if not os.path.isdir(save_folder):
             os.makedirs(save_folder)
 
         indexes = np.random.random_integers(low=0, high=self.num_train, size=batch_size)
 
-        left_img_paths = [self.left_img_paths[index] for index in indexes]
-        right_img_paths = [self.right_img_paths[index] for index in indexes]
+        left_img_paths = [self.train_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.train_right_img_paths[index] for index in indexes]
 
         for left_path, right_path in zip(left_img_paths, right_img_paths):
             left_img = cv2.imread(left_path)
@@ -158,6 +164,7 @@ class Dataset(object):
             # cv2.imwrite(os.path.join(save_folder, 's6_open_' + os.path.basename(left_path)), open_canvas)
             cv2.imwrite(os.path.join(save_folder, 's5_resize_' + os.path.basename(left_path)), resize_canvas)
 
+
     def _read_min_max_info(self):
         min_max_data = np.load(os.path.join('../data', 'rg_train' + self.data + '.npy'))
         self.x_min = min_max_data[0]
@@ -176,25 +183,76 @@ class Dataset(object):
         self.min_values = np.asarray([self.x_min, self.y_min, self.ra_min, self.rb_min, self.f_min, self.d_min])
         self.max_values = np.asarray([self.x_max, self.y_max, self.ra_max, self.rb_max, self.f_max, self.d_max])
 
-    def _read_img_path(self):
-        self.left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
-                                                    endswith=self.img_format,
-                                                    condition='L_')
-        self.right_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
-                                                     endswith=self.img_format,
-                                                     condition='R_')
 
-        assert len(self.left_img_paths) == len(self.right_img_paths)
-        self.num_train = len(self.left_img_paths)
+    def _read_img_path(self):
+        self._read_train_img_path()     # Read training img paths
+        self._read_val_img_path()       # Read val img paths
+        self._read_test_img_path()      # Read test img paths
+
+
+    def _read_train_img_path(self):
+        self.train_left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
+                                                          endswith=self.img_format,
+                                                          condition='L_')
+        self.train_right_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_train' + self.data),
+                                                           endswith=self.img_format,
+                                                           condition='R_')
+
+        assert len(self.train_left_img_paths) == len(self.train_right_img_paths)
+        self.num_train = len(self.train_left_img_paths)
+
+
+    def _read_val_img_path(self):
+        self.val_left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_val' + self.data),
+                                                        endswith=self.img_format,
+                                                        condition='L_')
+
+        self.val_right_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_val' + self.data),
+                                                         endswith=self.img_format,
+                                                         condition='R_')
+
+        assert len(self.val_left_img_paths) == len(self.val_right_img_paths)
+        self.num_val = len(self.val_left_img_paths)
+
+
+    def _read_test_img_path(self):
+        self.test_left_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_test' + self.data),
+                                                         endswith=self.img_format,
+                                                         condition='L_')
+        self.test_right_img_paths = utils.all_files_under(folder=os.path.join('../data', 'rg_test' + self.data),
+                                                          endswith=self.img_format,
+                                                          condition='R_')
+
+        assert len(self.test_left_img_paths) == len(self.test_right_img_paths)
+        self.num_test = len(self.test_left_img_paths)
+
 
     def train_random_batch(self, batch_size=4):
+        indexes = np.random.random_integers(low=0, high=self.num_train-1, size=batch_size)
+        left_img_paths = [self.train_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.train_right_img_paths[index] for index in indexes]
+
+        return self.data_reader(left_img_paths, right_img_paths)
+
+
+    def direct_batch(self, batch_size, start_index, stage='val'):
+        if start_index + batch_size < self.num_val:
+            end_index = start_index + batch_size
+        else:
+            end_index = self.num_val
+
+        # Select indexes
+        indexes = [idx for idx in range(start_index, end_index)]
+        left_img_paths = [self.val_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.val_right_img_paths[index] for index in indexes]
+
+        return self.data_reader(left_img_paths, right_img_paths)
+
+
+    def data_reader(self, left_img_paths, right_img_paths):
+        batch_size = len(left_img_paths)
         batch_imgs = np.zeros((batch_size, *self.input_shape), dtype=np.float32)
         batch_labels = np.zeros((batch_size, self.num_atrribute), dtype=np.float32)
-
-        indexes = np.random.random_integers(low=0, high=self.num_train-1, size=batch_size)
-
-        left_img_paths = [self.left_img_paths[index] for index in indexes]
-        right_img_paths = [self.right_img_paths[index] for index in indexes]
 
         for i, (left_path, right_path) in enumerate(zip(left_img_paths, right_img_paths)):
             # Process imgs
@@ -210,8 +268,8 @@ class Dataset(object):
             right_img_gray = cv2.cvtColor(right_img_crop, cv2.COLOR_BGR2GRAY)
 
             # Stage 3: Thresholding
-            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
-            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
+            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
 
             # Stage 4: Resize img
             left_img_resize = cv2.resize(left_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
@@ -220,15 +278,17 @@ class Dataset(object):
             batch_imgs[i, :] = np.dstack([left_img_resize, right_img_resize])
 
             # Process labels
-            batch_labels[i, :] = utils.read_label(left_path)
+            batch_labels[i, :] = utils.read_label(left_path, img_format=self.img_format)
 
         # Normalize labels
         batch_labels = self.normalize(batch_labels)
 
         return batch_imgs, batch_labels
 
+
     def normalize(self, data):
         return (data - self.min_values) / (self.max_values - self.min_values + self.small_value)
+
 
     def unnormalize(self, data):
         return data * (self.max_values - self.min_values + self.small_value) + self.min_values

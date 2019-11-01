@@ -11,10 +11,13 @@ import utils as utils
 import tensorflow_utils as tf_utils
 
 
-class ResNet18(object):
-    def __init__(self, input_shape, num_attribute=6, use_batchnorm=False, lr=1e-3, weight_decay=1e-4, total_iters=2e5,
-                 is_train=True, log_dir=None, name='ResNet18'):
+class ResNet18_Revised(object):
+    def __init__(self, input_shape, min_values, max_values, num_attribute=6, use_batchnorm=False, lr=1e-3,
+                 weight_decay=1e-4, total_iters=2e5, small_value=1e-7, is_train=True, log_dir=None, name='ResNet18'):
         self.input_shape = input_shape
+        self.min_values = min_values
+        self.max_values = max_values
+        self.small_value = small_value
         self.num_attribute = num_attribute
         self.use_batchnorm=use_batchnorm
         self.lr = lr
@@ -33,17 +36,21 @@ class ResNet18(object):
 
         self._build_graph()
         # TODO: self._best_metrics_record()
-        # TODO: self._eval_graph()
+        self._eval_graph()
         self._init_tensorboard()
         tf_utils.show_all_variables(logger=self.logger if self.is_train else None)
+
 
     def _build_graph(self):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape])
         self.gt_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute])
+        self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute])
         self.train_mode = tf.compat.v1.placeholder(dtype=tf.dtypes.bool, name='train_mode_ph')
 
         # Network forward for training
         self.preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
+        self.unnorm_preds = self.unnormalize(self.preds)
+        self.unnorm_gts = self.unnormalize(self.gt_tfph)
 
         # Data loss
         self.data_loss = tf.compat.v1.losses.mean_squared_error(predictions=self.preds, labels=self.gt_tfph)
@@ -58,6 +65,13 @@ class ResNet18(object):
         train_ops = [train_op] + self._ops
         self.train_op = tf.group(*train_ops)
 
+
+    def _eval_graph(self):
+        # Evalaution
+        self.eval_ops = tf.math.reduce_mean(tf.math.sqrt(tf.math.square(self.pred_tfph - self.gt_tfph)), axis=0)
+        self.avg_err = tf.math.reduce_mean(self.eval_ops)
+
+
     def _init_tensorboard(self):
         if self.is_train:
             self.tb_total = tf.compat.v1.summary.scalar('Loss/total_loss', self.total_loss)
@@ -65,6 +79,16 @@ class ResNet18(object):
             self.tb_reg = tf.compat.v1.summary.scalar('Loss/reg_term', self.reg_term)
             self.summary_op = tf.compat.v1.summary.merge(
                 inputs=[self.tb_total, self.tb_data, self.tb_reg, self.tb_lr])
+
+            self.eval_summary_op = tf.compat.v1.summary.merge([
+                tf.compat.v1.summary.scalar('eval/X_err', self.eval_ops[0]),
+                tf.compat.v1.summary.scalar('eval/Y_err', self.eval_ops[1]),
+                tf.compat.v1.summary.scalar('eval/Ra_err', self.eval_ops[2]),
+                tf.compat.v1.summary.scalar('eval/Rb_err', self.eval_ops[3]),
+                tf.compat.v1.summary.scalar('eval/F_err', self.eval_ops[4]),
+                tf.compat.v1.summary.scalar('eval/D_err', self.eval_ops[5]),
+                tf.compat.v1.summary.scalar('eval/avg_err', self.avg_err)])
+
 
     def init_optimizer(self, loss, name='Adam'):
         with tf.compat.v1.variable_scope(name):
@@ -87,6 +111,7 @@ class ResNet18(object):
 
         return learn_step
 
+
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
             tf_utils.print_activations(input_img, logger=self.logger)
@@ -107,16 +132,23 @@ class ResNet18(object):
                 inputs = tf_utils.norm(inputs, name='before_gap_batch_norm', _type='batch', _ops=self._ops,
                                        is_train=self.train_mode, logger=self.logger)
 
-            inputs = tf_utils.relu(inputs, name='before_gap_relu', logger=self.logger)
-            _, h, w, _ = inputs.get_shape().as_list()
-            inputs = tf_utils.avg_pool(inputs, name='gap', ksize=[1, h, w, 1], strides=[1, 1, 1, 1], logger=self.logger)
+            inputs = tf_utils.relu(inputs, name='before_flatten_relu', logger=self.logger)
 
+            # _, h, w, _ = inputs.get_shape().as_list()
+            # inputs = tf_utils.avg_pool(inputs, name='gap', ksize=[1, h, w, 1], strides=[1, 1, 1, 1], logger=self.logger)
+
+            # Flatten & FC1
             inputs = tf_utils.flatten(inputs, name='flatten', logger=self.logger)
-
             inputs = tf_utils.linear(inputs, 512, name='FC1')
-            logits = tf_utils.linear(inputs, self.num_attribute, name='FC2')
+            inputs = tf_utils.relu(inputs, name='FC1_relu', logger=self.logger)
+
+            inputs = tf_utils.linear(inputs, 256, name='FC2')
+            inputs = tf_utils.relu(inputs, name='FC2_relu', logger=self.logger)
+
+            logits = tf_utils.linear(inputs, self.num_attribute, name='Out')
 
             return logits
+
 
     def block_layer(self, inputs, filters, block_fn, blocks, strides, train_mode, name):
         # Only the first block per block_layer uses projection_shortcut and strides
@@ -126,6 +158,7 @@ class ResNet18(object):
             inputs = block_fn(inputs, filters, train_mode, None, 1, name=(name + '_' + str(num_iter + 1)))
 
         return tf.identity(inputs, name)
+
 
     def bottleneck_block(self, inputs, filters, train_mode, projection_shortcut, strides, name):
         with tf.compat.v1.variable_scope(name):
@@ -154,9 +187,11 @@ class ResNet18(object):
 
             return output
 
+
     def projection_shortcut(self, inputs, filters_out, strides, name):
         inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters_out, kernel_size=1, strides=strides, name=name)
         return inputs
+
 
     def conv2d_fixed_padding(self, inputs, filters, kernel_size, strides, name):
         if strides > 1:
@@ -167,6 +202,11 @@ class ResNet18(object):
                                  padding=('SAME' if strides == 1 else 'VALID'), logger=self.logger)
         return inputs
 
+
+    def unnormalize(self, data):
+        return data * (self.max_values - self.min_values + self.small_value) + self.min_values
+
+
     @staticmethod
     def fixed_padding(inputs, kernel_size):
         pad_total = kernel_size - 1
@@ -174,6 +214,7 @@ class ResNet18(object):
         pad_end = pad_total - pad_start
         inputs = tf.pad(inputs, [[0, 0], [pad_start, pad_end], [pad_start, pad_end], [0, 0]])
         return inputs
+
 
     @staticmethod
     def get_regularization_variables():
@@ -184,6 +225,7 @@ class ResNet18(object):
                      ('gamma' not in variable.name)]
 
         return variables
+
 
     @staticmethod
     def normalize(data):
