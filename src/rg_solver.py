@@ -4,7 +4,7 @@
 # Written by Cheng-Bin Jin
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
-import cv2
+# import cv2
 import numpy as np
 import tensorflow as tf
 
@@ -59,12 +59,11 @@ class Solver(object):
             unnorm_preds, unnorm_gts = self.sess.run([self.model.unnorm_preds, self.model.unnorm_gts], feed_dict=feed)
 
             # Save unnormalized labels for using evaluation
-            preds_total[index * batch_size :index * batch_size + num_imgs] = unnorm_preds
-            gts_total[index * batch_size :index * batch_size + num_imgs] = unnorm_gts
-
+            preds_total[i * batch_size :i * batch_size + num_imgs] = unnorm_preds
+            gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
 
         avg_err, summary = self.sess.run([self.model.avg_err, self.model.eval_summary_op],
-                                         feed_dict={self.model.unnorm_preds: preds_total,
-                                                    self.model.unnorm_gts: gts_total})
+                                         feed_dict={self.model.pred_tfph: preds_total,
+                                                    self.model.gt_tfph: gts_total})
 
         return avg_err, summary

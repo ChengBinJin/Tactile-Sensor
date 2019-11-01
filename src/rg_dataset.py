@@ -26,7 +26,7 @@ class Dataset(object):
         self.binarize_threshold = 20.
         self.input_shape = (int(np.floor(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.floor(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))), 2)
-        self.num_atrribute = num_attribute
+        self.num_attribute = num_attribute
         self.small_value = 1e-7
 
         self.logger = logging.getLogger(__name__)  # logger
@@ -57,7 +57,7 @@ class Dataset(object):
             self.logger.info('Num. of val imgs: \t{}'.format(self.num_val))
             self.logger.info('Numo of test imgs: \t{}'.format(self.num_test))
             self.logger.info('input_shape: \t{}'.format(self.input_shape))
-            self.logger.info('Num. of attributes: \t{}'.format(self.num_atrribute))
+            self.logger.info('Num. of attributes: \t{}'.format(self.num_attribute))
             self.logger.info('Small value: \t{}'.format(self.small_value))
             self.logger.info('X min: \t\t{:.3f}'.format(self.x_min))
             self.logger.info('X max: \t\t{:.3f}'.format(self.x_max))
@@ -86,7 +86,7 @@ class Dataset(object):
             print('Num. of val imgs: \t{}'.format(self.num_val))
             print('Numo of test imgs: \t{}'.format(self.num_test))
             print('input_shape: \t{}'.format(self.input_shape))
-            print('Num. of attributes: \t{}'.format(self.num_atrribute))
+            print('Num. of attributes: \t{}'.format(self.num_attribute))
             print('Small value: \t{}'.format(self.small_value))
             print('X min: \t\t{:.3f}'.format(self.x_min))
             print('X max: \t\t{:.3f}'.format(self.x_max))
@@ -252,7 +252,7 @@ class Dataset(object):
     def data_reader(self, left_img_paths, right_img_paths):
         batch_size = len(left_img_paths)
         batch_imgs = np.zeros((batch_size, *self.input_shape), dtype=np.float32)
-        batch_labels = np.zeros((batch_size, self.num_atrribute), dtype=np.float32)
+        batch_labels = np.zeros((batch_size, self.num_attribute), dtype=np.float32)
 
         for i, (left_path, right_path) in enumerate(zip(left_img_paths, right_img_paths)):
             # Process imgs

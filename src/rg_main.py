@@ -22,14 +22,14 @@ tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, d
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
 tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .png')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 64, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
 tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-5, 'weight decay for model to handle overfitting, defautl: 0.00001')
 tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
-tf.flags.DEFINE_integer('print_freq', 10, 'print frequence for loss information, default: 5')
+tf.flags.DEFINE_integer('print_freq', 5, 'print frequence for loss information, default: 5')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
 
@@ -98,7 +98,7 @@ def main(_):
     model = ResNet18_Revised(input_shape=data.input_shape,
                              min_values=data.min_values,
                              max_values=data.max_values,
-                             num_attribute=data.num_atrribute,
+                             num_attribute=data.num_attribute,
                              use_batchnorm=FLAGS.use_batchnorm,
                              lr=FLAGS.learning_rate,
                              weight_decay=FLAGS.weight_decay,
@@ -146,7 +146,7 @@ def train(solver, saver, logger, model_dir, log_dir):
             tb_writer.add_summary(summary, iter_time)
             tb_writer.flush()
 
-        if (iter_time % eval_iters == 0) or (iter_time + 1 == total_iters):
+        if (iter_time != 0) and ((iter_time % eval_iters == 0) or (iter_time + 1 == total_iters)):
             avg_err, eval_summary = solver.eval(batch_size=FLAGS.batch_size)
 
             # Write the summary of evaluation on tensorboard

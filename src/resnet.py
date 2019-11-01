@@ -42,9 +42,9 @@ class ResNet18_Revised(object):
 
 
     def _build_graph(self):
-        self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape])
-        self.gt_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute])
-        self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute])
+        self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape], name='img_tfph')
+        self.gt_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='gt_tfph')
+        self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='pred_tfph')
         self.train_mode = tf.compat.v1.placeholder(dtype=tf.dtypes.bool, name='train_mode_ph')
 
         # Network forward for training
@@ -81,13 +81,13 @@ class ResNet18_Revised(object):
                 inputs=[self.tb_total, self.tb_data, self.tb_reg, self.tb_lr])
 
             self.eval_summary_op = tf.compat.v1.summary.merge([
-                tf.compat.v1.summary.scalar('eval/X_err', self.eval_ops[0]),
-                tf.compat.v1.summary.scalar('eval/Y_err', self.eval_ops[1]),
-                tf.compat.v1.summary.scalar('eval/Ra_err', self.eval_ops[2]),
-                tf.compat.v1.summary.scalar('eval/Rb_err', self.eval_ops[3]),
-                tf.compat.v1.summary.scalar('eval/F_err', self.eval_ops[4]),
-                tf.compat.v1.summary.scalar('eval/D_err', self.eval_ops[5]),
-                tf.compat.v1.summary.scalar('eval/avg_err', self.avg_err)])
+                tf.compat.v1.summary.scalar('Eval/X_err', self.eval_ops[0]),
+                tf.compat.v1.summary.scalar('Eval/Y_err', self.eval_ops[1]),
+                tf.compat.v1.summary.scalar('Eval/Ra_err', self.eval_ops[2]),
+                tf.compat.v1.summary.scalar('Eval/Rb_err', self.eval_ops[3]),
+                tf.compat.v1.summary.scalar('Eval/F_err', self.eval_ops[4]),
+                tf.compat.v1.summary.scalar('Eval/D_err', self.eval_ops[5]),
+                tf.compat.v1.summary.scalar('Eval/avg_err', self.avg_err)])
 
 
     def init_optimizer(self, loss, name='Adam'):
@@ -104,7 +104,7 @@ class ResNet18_Revised(object):
                                                                           decay_steps=decay_steps,
                                                                           end_learning_rate=end_leanring_rate,
                                                                           power=1.0), start_learning_rate))
-            self.tb_lr = tf.compat.v1.summary.scalar('leanring_rate', learning_rate)
+            self.tb_lr = tf.compat.v1.summary.scalar('Leanring_rate', learning_rate)
 
             learn_step = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.99).minimize(
                 loss, global_step=global_step)
