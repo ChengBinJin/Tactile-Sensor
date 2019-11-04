@@ -27,7 +27,7 @@ tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, de
 tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
-tf.flags.DEFINE_float('weight_decay', 1e-5, 'weight decay for model to handle overfitting, defautl: 0.00001')
+tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
 tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
 tf.flags.DEFINE_integer('print_freq', 5, 'print frequence for loss information, default: 5')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
@@ -139,7 +139,7 @@ def train(solver, saver, logger, model_dir, log_dir):
 
         # Print loss information
         if iter_time % FLAGS.print_freq == 0:
-            msg = "[{0:6} / {1:6}] Total loss: {2:.3f}, Data loss: {3:.3f}, Reg. term: {4:.3f}"
+            msg = "[{0:6} / {1:6}] Total loss: {2:.5f}, Data loss: {3:.5f}, Reg. term: {4:.5f}"
             print(msg.format(iter_time, total_iters, total_loss, data_loss, reg_term))
 
             # Write to tensorboard
