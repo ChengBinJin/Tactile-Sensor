@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import logging
+import numpy as np
 import tensorflow as tf
 
 import utils as utils
@@ -20,6 +21,7 @@ class ResNet18_Revised(object):
         self.small_value = small_value
         self.num_attribute = num_attribute
         self.use_batchnorm=use_batchnorm
+        self.weights_constant = np.array([10.0, 10.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32)
         self.lr = lr
         self.weight_decay = weight_decay
         self.total_steps = total_iters
@@ -53,7 +55,8 @@ class ResNet18_Revised(object):
         self.unnorm_gts = self.unnormalize(self.gt_tfph)
 
         # Data loss
-        self.data_loss = tf.compat.v1.losses.mean_squared_error(predictions=self.preds, labels=self.gt_tfph)
+        self.data_loss = tf.compat.v1.losses.mean_squared_error(predictions=self.weights_constant * self.preds,
+                                                                labels=self.weights_constant * self.gt_tfph)
         # Regularization term
         variables = self.get_regularization_variables()
         self.reg_term = self.weight_decay * tf.math.reduce_mean([tf.nn.l2_loss(variable) for variable in variables])
