@@ -13,15 +13,15 @@ import tensorflow_utils as tf_utils
 
 
 class ResNet18_Revised(object):
-    def __init__(self, input_shape, min_values, max_values, num_attribute=6, use_batchnorm=False, lr=1e-3,
+    def __init__(self, input_shape, min_values, max_values, domain='xy', num_attribute=6, use_batchnorm=False, lr=1e-3,
                  weight_decay=1e-4, total_iters=2e5, small_value=1e-7, is_train=True, log_dir=None, name='ResNet18'):
         self.input_shape = input_shape
         self.min_values = min_values
         self.max_values = max_values
+        self.domain = domain
         self.small_value = small_value
         self.num_attribute = num_attribute
         self.use_batchnorm=use_batchnorm
-        self.weights_constant = np.array([10.0, 10.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32)
         self.lr = lr
         self.weight_decay = weight_decay
         self.total_steps = total_iters
@@ -31,6 +31,15 @@ class ResNet18_Revised(object):
         self.layers = [2, 2, 2, 2]
         self._ops = list()
         self.tb_lr = None
+
+        if self.domain.lower() == 'xy':
+            # X, Y, Ra, Rb, F, D
+            self.weights_constant = np.array([10.0, 10.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32)
+        elif self.domain.lower() == 'rarb':
+            # X, Y, Ra, Rb, F, D
+            self.weights_constant = np.array([1.0, 1.0, 10.0, 10.0, 1.0, 1.0], dtype=np.float32)
+        else:
+            raise NotImplementedError
 
         self.logger = logging.getLogger(__name__)  # logger
         self.logger.setLevel(logging.INFO)

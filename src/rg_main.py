@@ -20,11 +20,12 @@ import utils as utils
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
-tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .png')
+tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 32, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 128, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
-tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
+tf.flags.DEFINE_string('domain', 'rarb', 'data domtain for [xy | rarb], default: xy')
+tf.flags.DEFINE_string('data', '02', 'data folder name, default: 02')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
@@ -43,6 +44,7 @@ def print_main_parameters(logger, flags):
         logger.info('use_batchnorm: \t{}'.format(flags.use_batchnorm))
         logger.info('batch_size: \t\t{}'.format(flags.batch_size))
         logger.info('resize_factor: \t{}'.format(flags.resize_factor))
+        logger.info('domain: \t\t{}'.format(flags.domain))
         logger.info('data: \t\t{}'.format(flags.data))
         logger.info('is_train: \t\t{}'.format(flags.is_train))
         logger.info('learning_rate: \t{}'.format(flags.learning_rate))
@@ -58,6 +60,7 @@ def print_main_parameters(logger, flags):
         print('-- use_batchnorm: \t{}'.format(flags.use_batchnorm))
         print('-- batch_size: \t\t{}'.format(flags.batch_size))
         print('-- resize_factor: \t{}'.format(flags.resize_factor))
+        print('-- domain: \t\t{}'.format(flags.domain))
         print('-- data: \t\t{}'.format(flags.data))
         print('-- is_train: \t\t{}'.format(flags.is_train))
         print('-- learning_rate: \t{}'.format(flags.learning_rate))
@@ -92,12 +95,13 @@ def main(_):
                    num_attribute=6,  # X, Y, Ra, Rb, F, D
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
-                   is_debug=False)
+                   is_debug=True)
 
     # Initialize model
     model = ResNet18_Revised(input_shape=data.input_shape,
                              min_values=data.min_values,
                              max_values=data.max_values,
+                             domain=FLAGS.domain,
                              num_attribute=data.num_attribute,
                              use_batchnorm=FLAGS.use_batchnorm,
                              lr=FLAGS.learning_rate,
