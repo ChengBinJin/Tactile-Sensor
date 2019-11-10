@@ -39,7 +39,7 @@ class ResNet18(object):
 
     def _build_graph(self):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape], name='img_tfph')
-        self.gt_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_classes], name='gt_tfph')
+        self.label_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, 1], name='label_tfph')
         # self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='pred_tfph')
         self.train_mode = tf.compat.v1.placeholder(dtype=tf.dtypes.bool, name='train_mode_ph')
 
@@ -47,20 +47,44 @@ class ResNet18(object):
         self.preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
         # self.unnorm_preds = self.unnormalize(self.preds)
         # self.unnorm_gts = self.unnormalize(self.gt_tfph)
-        #
-        # # Data loss
-        # self.data_loss = tf.compat.v1.losses.mean_squared_error(predictions=self.weights_constant * self.preds,
-        #                                                         labels=self.weights_constant * self.gt_tfph)
-        # # Regularization term
-        # variables = self.get_regularization_variables()
-        # self.reg_term = self.weight_decay * tf.math.reduce_mean([tf.nn.l2_loss(variable) for variable in variables])
-        # # Total loss
-        # self.total_loss = self.data_loss + self.reg_term
-        #
-        # # Optimizer
-        # train_op = self.init_optimizer(loss=self.total_loss)
+
+        # Data loss
+        self.data_loss = tf.math.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
+            labels=self.convert_to_one_hot(self.label_tfph), logist=self.preds))
+
+        # Regularization term
+        variables = self.get_regularization_variables()
+        self.reg_term = self.weight_decay * tf.math.reduce_mean([tf.nn.l2_loss(variable) for variable in variables])
+        # Total loss
+        self.total_loss = self.data_loss + self.reg_term
+
+        # Optimizer
+        train_op = self.init_optimizer(loss=self.total_loss)
         # train_ops = [train_op] + self._ops
         # self.train_op = tf.group(*train_ops)
+
+
+    def init_optimizer(self, loss, name='Adam'):
+        with tf.compat.v1.variable_scope(name):
+            global_step = tf.Variable(0., dtype=tf.float32, trainable=False)
+            start_learning_rate = self.lr
+            end_leanring_rate = self.lr * 0.001
+            start_decay_step = int(self.total_steps * 0.5)
+            decay_steps = self.total_steps - start_decay_step
+
+            learning_rate = (tf.where(tf.greater_equal(global_step, start_decay_step),
+                                      tf.compat.v1.train.polynomial_decay(learning_rate=start_learning_rate,
+                                                                          global_step=(global_step - start_decay_step),
+                                                                          decay_steps=decay_steps,
+                                                                          end_learning_rate=end_leanring_rate,
+                                                                          power=1.0), start_learning_rate))
+            self.tb_lr = tf.compat.v1.summary.scalar('Leanring_rate', learning_rate)
+
+            learn_step = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.99).minimize(
+                loss, global_step=global_step)
+
+        return learn_step
+
 
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
@@ -143,6 +167,8 @@ class ResNet18(object):
                                  padding=('SAME' if strides == 1 else 'VALID'), logger=self.logger)
         return inputs
 
+    def convert_to_one_hot(self, data):
+        return tf.one_hot(data, depth=self.num_classes, dtype=tf.float32, name='convert_one_hot')
 
     @staticmethod
     def fixed_padding(inputs, kernel_size):
@@ -151,6 +177,17 @@ class ResNet18(object):
         pad_end = pad_total - pad_start
         inputs = tf.pad(inputs, [[0, 0], [pad_start, pad_end], [pad_start, pad_end], [0, 0]])
         return inputs
+
+
+    @staticmethod
+    def get_regularization_variables():
+        # We exclude 'bias', 'beta' and 'gamma' in batch normalization
+        variables = [variable for variable in tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES)
+                     if ('bias' not in variable.name) and
+                     ('beta' not in variable.name) and
+                     ('gamma' not in variable.name)]
+
+        return variables
 
 
     @staticmethod
