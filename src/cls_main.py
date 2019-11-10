@@ -6,18 +6,19 @@
 # --------------------------------------------------------------------------
 import os
 import logging
-from datetime import datetime
+import numpy as np
 import tensorflow as tf
+from datetime import datetime
 
-from cls_dataset import Dataset
 import utils as utils
+from cls_dataset import Dataset
+from cls_resnet import ResNet18
 
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
 tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
-tf.flags.DEFINE_bool('use_batchnorm', True, 'use batchnorm or not in classification task, default: True')
 tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
 tf.flags.DEFINE_string('shape', 'circle', 'shape folder select from [circle|hexagon|square], default: circle')
@@ -36,8 +37,6 @@ def print_main_parameters(logger, flags):
         logger.info('gpu_index: \t\t{}'.format(flags.gpu_index))
         logger.info('mode: \t\t{}'.format(flags.mode))
         logger.info('img_format: \t\t{}'.format(flags.img_format))
-        logger.info('use_batchnorm: \t{}'.format(flags.use_batchnorm))
-        logger.info('batch_size: \t\t{}'.format(flags.batch_size))
         logger.info('resize_factor: \t{}'.format(flags.resize_factor))
         logger.info('shape: \t\t{}'.format(flags.shape))
         logger.info('is_train: \t\t{}'.format(flags.is_train))
@@ -51,8 +50,6 @@ def print_main_parameters(logger, flags):
         print('-- gpu_index: \t\t{}'.format(flags.gpu_index))
         print('-- mode: \t\t{}'.format(flags.mode))
         print('-- format: \t\t{}'.format(flags.img_format))
-        print('-- use_batchnorm: \t{}'.format(flags.use_batchnorm))
-        print('-- batch_size: \t\t{}'.format(flags.batch_size))
         print('-- resize_factor: \t{}'.format(flags.resize_factor))
         print('-- shape: \t\t{}'.format(flags.shape))
         print('-- is_train: \t\t{}'.format(flags.is_train))
@@ -87,6 +84,15 @@ def main(_):
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
                    is_debug=True)
+
+    # Initialize model
+    model = ResNet18(input_shape=data.input_shape,
+                     num_classes=5,
+                     lr=FLAGS.learning_rate,
+                     weight_decay=FLAGS.weight_decay,
+                     total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
+                     is_train=FLAGS.is_train,
+                     log_dir=log_dir)
 
 
 if __name__ == '__main__':
