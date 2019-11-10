@@ -9,6 +9,7 @@ import logging
 from datetime import datetime
 import tensorflow as tf
 
+from cls_dataset import Dataset
 import utils as utils
 
 
@@ -77,6 +78,15 @@ def main(_):
     logger.setLevel(logging.INFO)
     utils.init_logger(logger=logger, log_dir=log_dir, is_train=FLAGS.is_train, name='main')
     print_main_parameters(logger, flags=FLAGS)
+
+    # Initialize dataset
+    data = Dataset(shape=FLAGS.shape,
+                   mode=FLAGS.mode,
+                   img_format=FLAGS.img_format,
+                   resize_factor=FLAGS.resize_factor,
+                   is_train=FLAGS.is_train,
+                   log_dir=log_dir,
+                   is_debug=True)
 
 
 if __name__ == '__main__':

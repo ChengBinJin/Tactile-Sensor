@@ -144,8 +144,10 @@ class Dataset(object):
             # right_img_open = cv2.morphologyEx(right_img_close, cv2.MORPH_OPEN, kernel)
 
             # Resize img
-            left_img_resize = cv2.resize(left_img_binary , None, fx=self.resize_factor, fy=self.resize_factor)
-            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
+            left_img_resize = cv2.resize(left_img_binary , None, fx=self.resize_factor, fy=self.resize_factor,
+                                         interpolation=cv2.INTER_NEAREST)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                          interpolation=cv2.INTER_NEAREST)
 
             roi_canvas = np.hstack([left_img_roi, right_img_roi])
             crop_canvas = np.hstack([left_img_crop, right_img_crop])
@@ -272,8 +274,10 @@ class Dataset(object):
             _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
 
             # Stage 4: Resize img
-            left_img_resize = cv2.resize(left_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
-            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor)
+            left_img_resize = cv2.resize(left_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                         interpolation=cv2.INTER_NEAREST)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                          interpolation=cv2.INTER_NEAREST)
 
             batch_imgs[i, :] = np.dstack([left_img_resize, right_img_resize])
 
