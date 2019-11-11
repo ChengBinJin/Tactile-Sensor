@@ -238,15 +238,26 @@ class Dataset(object):
 
 
     def direct_batch(self, batch_size, start_index, stage='val'):
-        if start_index + batch_size < self.num_val:
+        if stage == 'val':
+            num_imgs = self.num_val
+            left_img_paths = self.val_left_img_paths
+            right_img_paths = self.val_right_img_paths
+        elif stage == 'test':
+            num_imgs = self.num_test
+            left_img_paths = self.test_left_img_paths
+            right_img_paths = self.test_right_img_paths
+        else:
+            raise NotImplementedError
+
+        if start_index + batch_size < num_imgs:
             end_index = start_index + batch_size
         else:
-            end_index = self.num_val
+            end_index = num_imgs
 
         # Select indexes
         indexes = [idx for idx in range(start_index, end_index)]
-        left_img_paths = [self.val_left_img_paths[index] for index in indexes]
-        right_img_paths = [self.val_right_img_paths[index] for index in indexes]
+        left_img_paths = [left_img_paths[index] for index in indexes]
+        right_img_paths = [right_img_paths[index] for index in indexes]
 
         return self.data_reader(left_img_paths, right_img_paths)
 

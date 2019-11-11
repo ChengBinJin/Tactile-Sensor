@@ -89,3 +89,5 @@ class Solver(object):
             # Save unnormalized labels for using evaluation
             preds_total[i * batch_size :i * batch_size + num_imgs] = unnorm_preds
             gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
+
+        return preds_total, gts_total

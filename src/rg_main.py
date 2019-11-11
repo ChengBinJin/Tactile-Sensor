@@ -6,6 +6,7 @@
 # --------------------------------------------------------------------------
 import os
 import math
+import xlsxwriter
 import logging
 import numpy as np
 from datetime import datetime
@@ -175,7 +176,45 @@ def test(solver, saver, model_dir):
         else:
             exit(' [!] Failed to restore model {}'.format(FLAGS.load_model))
 
-    solver.test_eval(batch_size=FLAGS.batch_size)
+    preds, gts = solver.test_eval(batch_size=FLAGS.batch_size)
+    write_to_csv(preds, gts, solver)
+
+
+def write_to_csv(preds, gts, solver):
+    # Create a workbook and add a worksheet
+    xlsx_name = FLAGS.domain + '_data' + FLAGS.data + '_' + FLAGS.load_model + '.xlsx'
+    workbook = xlsxwriter.Workbook(os.path.join('./', xlsx_name))
+    xlsFormat = workbook.add_format()
+    xlsFormat.set_align('center')
+    xlsFormat.set_valign('vcenter')
+
+    # Calculate l2 error and average error
+    l2_error = np.sqrt(np.square(preds - gts))
+    avg_error = np.mean(l2_error, axis=0)
+
+    data_list = [('preds', preds), ('gts', gts), ('l2_error', l2_error)]
+    attributes = ['No', 'Name', 'X', 'Y', 'Ra', 'Rb', 'F', 'D']
+    for file_name, data in data_list:
+        worksheet = workbook.add_worksheet(name=file_name)
+        for attr_idx in range(len(attributes)):
+            worksheet.write(0, attr_idx, attributes[attr_idx], xlsFormat)
+
+        for idx in range(solver.data.num_test):
+            for attr_idx in range(len(attributes)):
+                if attr_idx == 0:       # No
+                    worksheet.write(idx + 1, attr_idx, str(idx).zfill(3), xlsFormat)
+                elif attr_idx == 1:     # Name
+                    worksheet.write(idx + 1, attr_idx, solver.data.test_left_img_paths[idx], xlsFormat)
+                else:
+                    worksheet.write(idx + 1, attr_idx, data[idx, attr_idx - 2], xlsFormat)
+
+        # Write average error
+        if file_name == 'l2_error':
+            worksheet.write(solver.data.num_test + 1, 1, 'average error', xlsFormat)
+            for attr_idx in range(solver.data.num_attribute):
+                worksheet.write(solver.data.num_test + 1, attr_idx + 2, avg_error[attr_idx], xlsFormat)
+
+    workbook.close()
 
 
 def save_model(saver, solver, logger, model_dir, iter_time, best_rmse):
