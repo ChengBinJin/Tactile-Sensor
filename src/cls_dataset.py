@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
+import cv2
 import logging
 import numpy as np
 
@@ -34,40 +35,39 @@ class Dataset(object):
         self._read_img_path()  # read all img paths
         self.print_parameters()
 
-
     def _read_img_path(self):
-        self.cls01_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_1'),
+        self.cls01_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_0'),
                                                 endswith=self.img_format,
                                                 condition='_L_')
-        self.cls01_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_1'),
+        self.cls01_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_0'),
                                                  endswith=self.img_format,
                                                  condition='_R_')
 
-        self.cls02_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_2'),
+        self.cls02_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_1'),
                                            endswith=self.img_format,
                                            condition='_L_')
-        self.cls02_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_2'),
+        self.cls02_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_1'),
                                            endswith=self.img_format,
                                            condition='_R_')
 
-        self.cls03_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_3'),
+        self.cls03_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_2'),
                                            endswith=self.img_format,
                                            condition='_L_')
-        self.cls03_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_3'),
+        self.cls03_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_2'),
                                                  endswith=self.img_format,
                                                  condition='_R_')
 
-        self.cls04_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_4'),
+        self.cls04_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_3'),
                                                 endswith=self.img_format,
                                                 condition='_L_')
-        self.cls04_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_4'),
+        self.cls04_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_3'),
                                                  endswith=self.img_format,
                                                  condition='_R_')
 
-        self.cls05_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_5'),
+        self.cls05_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_4'),
                                                 endswith=self.img_format,
                                                 condition='_L_')
-        self.cls05_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_5'),
+        self.cls05_right = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_4'),
                                                  endswith=self.img_format,
                                                  condition='_R_')
 
@@ -75,53 +75,55 @@ class Dataset(object):
         self._read_val_img_path()       # Read val img paths
         self._read_test_img_path()      # Read test img paths
 
-
     def _read_train_img_path(self):
         self.train_left_img_paths = list()
         self.train_right_img_paths = list()
+        self.train_labels = list()
 
         left_paths = [self.cls01_left, self.cls02_left, self.cls03_left, self.cls04_left, self.cls05_left]
         right_paths = [self.cls01_right, self.cls02_right, self.cls03_right, self.cls04_right, self.cls05_right]
 
-        for left_path, right_path in zip(left_paths, right_paths):
+        for label, (left_path, right_path) in enumerate(zip(left_paths, right_paths)):
             self.train_left_img_paths.extend(left_path[0:int(self.train_ratio * len(left_path))])
             self.train_right_img_paths.extend(right_path[0:int(self.train_ratio * len(right_path))])
+            self.train_labels.extend(label * np.ones(int(self.train_ratio * len(left_path)), dtype=np.uint8))
 
         assert len(self.train_left_img_paths) == len(self.train_right_img_paths)
         self.num_train = len(self.train_left_img_paths)
 
-
     def _read_val_img_path(self):
         self.val_left_img_paths = list()
         self.val_right_img_paths = list()
+        self.val_labels = list()
 
         left_paths = [self.cls01_left, self.cls02_left, self.cls03_left, self.cls04_left, self.cls05_left]
         right_paths = [self.cls01_right, self.cls02_right, self.cls03_right, self.cls04_right, self.cls05_right]
 
-        for left_path, right_path in zip(left_paths, right_paths):
+        for label, (left_path, right_path) in enumerate(zip(left_paths, right_paths)):
             self.val_left_img_paths.extend(left_path[int(self.train_ratio * len(left_path))
                                                      :int((self.train_ratio + self.val_ratio) * len(left_path))])
             self.val_right_img_paths.extend(right_path[int(self.train_ratio * len(left_path))
                                                        :int((self.train_ratio + self.val_ratio) * len(right_path))])
+            self.val_labels.extend(label * np.ones(int(self.val_ratio * len(left_path)), dtype=np.uint8))
 
         assert len(self.val_left_img_paths) == len(self.val_right_img_paths)
         self.num_val = len(self.val_left_img_paths)
 
-
     def _read_test_img_path(self):
         self.test_left_img_paths = list()
         self.test_right_img_paths = list()
+        self.test_labels = list()
 
         left_paths = [self.cls01_left, self.cls02_left, self.cls03_left, self.cls04_left, self.cls05_left]
         right_paths = [self.cls01_right, self.cls02_right, self.cls03_right, self.cls04_right, self.cls05_right]
 
-        for left_path, right_path in zip(left_paths, right_paths):
+        for label, (left_path, right_path) in enumerate(zip(left_paths, right_paths)):
             self.test_left_img_paths.extend(left_path[-int(self.test_ratio * len(left_path)):])
             self.test_right_img_paths.extend(right_path[-int(self.test_ratio * len(right_path)):])
+            self.test_labels.extend(label * np.ones(int(self.test_ratio * len(left_path)), dtype=np.uint8))
 
         assert len(self.test_left_img_paths) == len(self.test_right_img_paths)
         self.num_test = len(self.test_left_img_paths)
-
 
     def print_parameters(self):
         if self.is_train:
@@ -174,4 +176,47 @@ class Dataset(object):
             print('Num. of val imgs: \t\t{}'.format(self.num_val))
             print('Numo of test imgs: \t\t{}'.format(self.num_test))
             print('input_shape: \t\t{}'.format(self.input_shape))
+
+    def train_random_batch(self, batch_size=4):
+        # Random select samples
+        indexes = np.random.random_integers(low=0, high=self.num_train-1, size=batch_size)
+        # Select img paths
+        left_img_paths = [self.train_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.train_right_img_paths[index] for index in indexes]
+        # Read imgs and labels
+        batch_imgs = self.data_reader(left_img_paths, right_img_paths)
+        batch_labels = np.asarray([self.train_labels[index] for index in indexes])
+
+        return batch_imgs, batch_labels
+
+    def data_reader(self, left_img_paths, right_img_paths):
+        batch_size = len(left_img_paths)
+        batch_imgs = np.zeros((batch_size, *self.input_shape), dtype=np.float32)
+
+        for i, (left_path, right_path) in enumerate(zip(left_img_paths, right_img_paths)):
+            # Process imgs
+            left_img = cv2.imread(left_path)
+            right_img = cv2.imread(right_path)
+
+            # Stage 1: cropping
+            left_img_crop = left_img[self.top_left[0]:self.bottom_right[0], self.top_left[1]: self.bottom_right[1]]
+            right_img_crop = right_img[self.top_left[0]:self.bottom_right[0], self.top_left[1]: self.bottom_right[1]]
+
+            # Stage 2: BGR to Gray
+            left_img_gray = cv2.cvtColor(left_img_crop, cv2.COLOR_BGR2GRAY)
+            right_img_gray = cv2.cvtColor(right_img_crop, cv2.COLOR_BGR2GRAY)
+
+            # Stage 3: Thresholding
+            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
+            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
+
+            # Stage 4: Resize img
+            left_img_resize = cv2.resize(left_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                         interpolation=cv2.INTER_NEAREST)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                          interpolation=cv2.INTER_NEAREST)
+
+            batch_imgs[i, :] = np.dstack([left_img_resize, right_img_resize])
+
+        return batch_imgs
 

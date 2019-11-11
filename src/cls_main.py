@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
+import cv2
 import logging
 import numpy as np
 import tensorflow as tf
@@ -13,6 +14,7 @@ from datetime import datetime
 import utils as utils
 from cls_dataset import Dataset
 from cls_resnet import ResNet18
+from cls_solver import Solver
 
 
 FLAGS = tf.flags.FLAGS
@@ -93,6 +95,9 @@ def main(_):
                      total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
                      is_train=FLAGS.is_train,
                      log_dir=log_dir)
+
+    # Initialize solver
+    solver = Solver(model, data)
 
 
 if __name__ == '__main__':

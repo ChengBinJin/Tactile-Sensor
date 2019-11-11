@@ -39,7 +39,7 @@ class ResNet18(object):
 
     def _build_graph(self):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape], name='img_tfph')
-        self.label_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, 1], name='label_tfph')
+        self.label_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.uint8, shape=[None, 1], name='label_tfph')
         # self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='pred_tfph')
         self.train_mode = tf.compat.v1.placeholder(dtype=tf.dtypes.bool, name='train_mode_ph')
 
@@ -50,7 +50,7 @@ class ResNet18(object):
 
         # Data loss
         self.data_loss = tf.math.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
-            labels=self.convert_to_one_hot(self.label_tfph), logist=self.preds))
+            labels=self.convert_to_one_hot(self.label_tfph), logits=self.preds))
 
         # Regularization term
         variables = self.get_regularization_variables()
@@ -60,9 +60,8 @@ class ResNet18(object):
 
         # Optimizer
         train_op = self.init_optimizer(loss=self.total_loss)
-        # train_ops = [train_op] + self._ops
-        # self.train_op = tf.group(*train_ops)
-
+        train_ops = [train_op] + self._ops
+        self.train_op = tf.group(*train_ops)
 
     def init_optimizer(self, loss, name='Adam'):
         with tf.compat.v1.variable_scope(name):
@@ -84,7 +83,6 @@ class ResNet18(object):
                 loss, global_step=global_step)
 
         return learn_step
-
 
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
@@ -116,7 +114,6 @@ class ResNet18(object):
 
             return logits
 
-
     def block_layer(self, inputs, filters, block_fn, blocks, strides, train_mode, name):
         # Only the first block per block_layer uses projection_shortcut and strides
         inputs = block_fn(inputs, filters, train_mode, self.projection_shortcut, strides, name + '_1')
@@ -125,7 +122,6 @@ class ResNet18(object):
             inputs = block_fn(inputs, filters, train_mode, None, 1, name=(name + '_' + str(num_iter + 1)))
 
         return tf.identity(inputs, name)
-
 
     def bottleneck_block(self, inputs, filters, train_mode, projection_shortcut, strides, name):
         with tf.compat.v1.variable_scope(name):
@@ -152,11 +148,9 @@ class ResNet18(object):
 
             return output
 
-
     def projection_shortcut(self, inputs, filters_out, strides, name):
         inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters_out, kernel_size=1, strides=strides, name=name)
         return inputs
-
 
     def conv2d_fixed_padding(self, inputs, filters, kernel_size, strides, name):
         if strides > 1:
@@ -168,7 +162,8 @@ class ResNet18(object):
         return inputs
 
     def convert_to_one_hot(self, data):
-        return tf.one_hot(data, depth=self.num_classes, dtype=tf.float32, name='convert_one_hot')
+        data = tf.dtypes.cast(data, dtype=tf.dtypes.uint8)
+        return tf.one_hot(data, depth=self.num_classes, name='convert_one_hot')
 
     @staticmethod
     def fixed_padding(inputs, kernel_size):
@@ -177,7 +172,6 @@ class ResNet18(object):
         pad_end = pad_total - pad_start
         inputs = tf.pad(inputs, [[0, 0], [pad_start, pad_end], [pad_start, pad_end], [0, 0]])
         return inputs
-
 
     @staticmethod
     def get_regularization_variables():
@@ -189,7 +183,7 @@ class ResNet18(object):
 
         return variables
 
-
     @staticmethod
     def normalize(data):
-        return data - 127.5
+        # return data - 127.5
+        return (data - 127.5) / 127.5
