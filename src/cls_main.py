@@ -21,7 +21,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
 tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
-tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 128, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
 tf.flags.DEFINE_string('shape', 'circle', 'shape folder select from [circle|hexagon|square], default: circle')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
@@ -85,7 +85,7 @@ def main(_):
                    resize_factor=FLAGS.resize_factor,
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
-                   is_debug=True)
+                   is_debug=False)
 
     # Initialize model
     model = ResNet18(input_shape=data.input_shape,
@@ -99,6 +99,80 @@ def main(_):
     # Initialize solver
     solver = Solver(model, data)
 
+    # Initialize saver
+    saver = tf.compat.v1.train.Saver(max_to_keep=1)
+
+    if FLAGS.is_train is True:
+        train(solver, saver, logger, model_dir, log_dir)
+    else:
+        test(solver, saver, model_dir, log_dir)
+
+
+def train(solver, saver, logger, model_dir, log_dir):
+    best_acc = 0.
+    iter_time, eval_time = 0, 0
+    total_iters = int(np.ceil(FLAGS.epoch * solver.data.num_train / FLAGS.batch_size))
+    eval_iters = total_iters // 100
+
+    if FLAGS.load_model is not None:
+        flag, iter_time = load_model(saver=saver, solver=solver, model_dir=model_dir, logger=logger, is_train=True)
+        if flag is True:
+            logger.info(' [!] Load Success! Iter: {}'.format(iter_time))
+        else:
+            exit(' [!] Failed to restore model {}'.format(FLAGS.load_model))
+
+    # Tensorbaord writer
+    tb_writer = tf.compat.v1.summary.FileWriter(logdir=log_dir, graph=solver.sess.graph_def)
+
+    while iter_time < total_iters:
+        total_loss, data_loss, reg_term, summary = solver.train(batch_size=FLAGS.batch_size)
+
+        # Print loss information
+        if iter_time % FLAGS.print_freq == 0:
+            msg = "[{0:5} / {1:5}] Total loss: {2:.3f}, Data loss: {3:.3f}, Reg. term: {4:.5f}"
+            print(msg.format(iter_time, total_iters, total_loss, data_loss, reg_term))
+
+            # Write to tensorbaord
+            tb_writer.add_summary(summary, iter_time)
+            tb_writer.flush()
+
+        if (iter_time != 0) and ((iter_time % eval_iters == 0) or (iter_time + 1 == total_iters)):
+            cur_acc, eval_summary = solver.eval(batch_size=FLAGS.batch_size)
+
+            # Write the summary of evaluation on tensorboard
+            tb_writer.add_summary(eval_summary, eval_time)
+            tb_writer.flush()
+
+            if cur_acc > best_acc:
+                best_acc = cur_acc
+
+            print('Acc.: {:.2%}, Best Acc.: {:.2%}'.format(cur_acc, best_acc))
+            eval_time += 1
+
+        iter_time += 1
+
+
+def test (solver, saver, model_dir, log_dir):
+    print("Hello test function")
+
+
+def load_model(saver, solver, model_dir, logger=None, is_train=False):
+    if is_train:
+        logger.info(' [*] Reading checkpoint...')
+    else:
+        print(' [*] Reading checkpoint...')
+
+    ckpt = tf.train.get_checkpoint_state(model_dir)
+    if ckpt and ckpt.model_checkpoint_path:
+        ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+        saver.restore(solver.sess, os.path.join(model_dir, ckpt_name))
+
+        meta_graph_path = ckpt.model_checkpoint_path + '.meta'
+        iter_time = int(meta_graph_path.split('-')[-1].split('.')[0])
+
+        return True, iter_time
+    else:
+        return False, None
 
 if __name__ == '__main__':
     tf.compat.v1.app.run()

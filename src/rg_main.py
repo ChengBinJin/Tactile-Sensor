@@ -116,7 +116,7 @@ def main(_):
     saver = tf.compat.v1.train.Saver(max_to_keep=1)
 
     if FLAGS.is_train is True:
-        train(solver, saver ,logger, model_dir, log_dir)
+        train(solver, saver, logger, model_dir, log_dir)
     else:
         test(solver, saver, model_dir, log_dir)
 

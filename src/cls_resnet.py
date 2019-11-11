@@ -33,20 +33,19 @@ class ResNet18(object):
 
         self._build_graph()
         # TODO: self._best_metrics_record()
-        # self._eval_graph()
-        # self._init_tensorboard()
+        self._eval_graph()
+        self._init_tensorboard()
         # tf_utils.show_all_variables(logger=self.logger if self.is_train else None)
 
     def _build_graph(self):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape], name='img_tfph')
-        self.label_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.uint8, shape=[None, 1], name='label_tfph')
+        self.label_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.int32, shape=[None, 1], name='label_tfph')
         # self.pred_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='pred_tfph')
         self.train_mode = tf.compat.v1.placeholder(dtype=tf.dtypes.bool, name='train_mode_ph')
 
         # Network forward for training
         self.preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
-        # self.unnorm_preds = self.unnormalize(self.preds)
-        # self.unnorm_gts = self.unnormalize(self.gt_tfph)
+        self.preds_cls = tf.math.argmax(self.preds, axis=-1, output_type=tf.dtypes.int32)
 
         # Data loss
         self.data_loss = tf.math.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -83,6 +82,29 @@ class ResNet18(object):
                 loss, global_step=global_step)
 
         return learn_step
+
+    def _init_tensorboard(self):
+        if self.is_train:
+            self.tb_total = tf.compat.v1.summary.scalar('Loss/total_loss', self.total_loss)
+            self.tb_data = tf.compat.v1.summary.scalar('Loss/data_loss', self.data_loss)
+            self.tb_reg = tf.compat.v1.summary.scalar('Loss/reg_term', self.reg_term)
+            self.summary_op = tf.compat.v1.summary.merge(
+                inputs=[self.tb_total, self.tb_data, self.tb_reg, self.tb_lr])
+
+            self.tb_accuracy = tf.compat.v1.summary.scalar('Acc/val_acc', self.accuracy_metric * 100.)
+            self.metric_summary_op = tf.compat.v1.summary.merge(inputs=[self.tb_accuracy])
+
+    def _eval_graph(self):
+        # Calculate accuracy using tensorflow
+        with tf.compat.v1.name_scope('Metrics'):
+            self.accuracy_metric, self.accuracy_metric_update = tf.compat.v1.metrics.accuracy(
+                labels=tf.squeeze(self.label_tfph, axis=-1), predictions=self.preds_cls)
+
+        # Isolate the variables stored behind the scens by the metric operation
+        running_vars = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.LOCAL_VARIABLES, scope='Metrics')
+
+        # Define initializer to initialize/reset running variables
+        self.running_vars_initializer = tf.compat.v1.variables_initializer(var_list=running_vars)
 
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
@@ -162,7 +184,7 @@ class ResNet18(object):
         return inputs
 
     def convert_to_one_hot(self, data):
-        data = tf.dtypes.cast(data, dtype=tf.dtypes.uint8)
+        data = tf.dtypes.cast(data, dtype=tf.dtypes.int32)
         return tf.one_hot(data, depth=self.num_classes, name='convert_one_hot')
 
     @staticmethod

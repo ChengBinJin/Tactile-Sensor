@@ -33,7 +33,10 @@ class Dataset(object):
         utils.init_logger(logger=self.logger, log_dir=log_dir, is_train=is_train, name='cls_dataset')
 
         self._read_img_path()  # read all img paths
+
         self.print_parameters()
+        if self.is_debug:
+            self._debug_roi_test()
 
     def _read_img_path(self):
         self.cls01_left = utils.all_files_under(folder=os.path.join('../data', 'cls_' + self.shape, self.shape + '_0'),
@@ -177,6 +180,56 @@ class Dataset(object):
             print('Numo of test imgs: \t\t{}'.format(self.num_test))
             print('input_shape: \t\t{}'.format(self.input_shape))
 
+    def _debug_roi_test(self, batch_size=5, color=(0, 0, 255), thickness=2, save_folder='../debug'):
+        if not os.path.isdir(save_folder):
+            os.makedirs(save_folder)
+
+        indexes = np.random.random_integers(low=0, high=self.num_train, size=batch_size)
+
+        left_img_paths = [self.train_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.train_right_img_paths[index] for index in indexes]
+
+        for left_path, right_path in zip(left_img_paths, right_img_paths):
+            left_img = cv2.imread(left_path)
+            right_img = cv2.imread(right_path)
+
+            # Draw roi
+            left_img_roi = cv2.rectangle(left_img.copy(), (self.top_left[1], self.top_left[0]),
+                                         (self.bottom_right[1], self.bottom_right[0]), color=color, thickness=thickness)
+            right_img_roi = cv2.rectangle(right_img.copy(), (self.top_left[1], self.top_left[0]),
+                                          (self.bottom_right[1], self.bottom_right[0]), color=color, thickness=thickness)
+
+            # Cropping
+            left_img_crop = left_img[self.top_left[0]:self.bottom_right[0], self.top_left[1]: self.bottom_right[1]]
+            right_img_crop = right_img[self.top_left[0]:self.bottom_right[0], self.top_left[1]: self.bottom_right[1]]
+
+            # BGR to Gray
+            left_img_gray = cv2.cvtColor(left_img_crop, cv2.COLOR_BGR2GRAY)
+            right_img_gray = cv2.cvtColor(right_img_crop, cv2.COLOR_BGR2GRAY)
+
+            # Thresholding
+            _, left_img_binary = cv2.threshold(left_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+            _, right_img_binary = cv2.threshold(right_img_gray, self.binarize_threshold , 255., cv2.THRESH_BINARY)
+
+            # Resize img
+            left_img_resize = cv2.resize(left_img_binary , None, fx=self.resize_factor, fy=self.resize_factor,
+                                         interpolation=cv2.INTER_NEAREST)
+            right_img_resize = cv2.resize(right_img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+                                          interpolation=cv2.INTER_NEAREST)
+
+            roi_canvas = np.hstack([left_img_roi, right_img_roi])
+            crop_canvas = np.hstack([left_img_crop, right_img_crop])
+            gray_canvas = np.hstack([left_img_gray, right_img_gray])
+            binary_canvas = np.hstack([left_img_binary, right_img_binary])
+            resize_canvas = np.hstack([left_img_resize, right_img_resize])
+
+            # Save img
+            cv2.imwrite(os.path.join(save_folder, 's1_roi_' + os.path.basename(left_path)), roi_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's2_crop_' + os.path.basename(left_path)), crop_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's3_gray_' + os.path.basename(left_path)), gray_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's4_binary_' + os.path.basename(left_path)), binary_canvas)
+            cv2.imwrite(os.path.join(save_folder, 's5_resize_' + os.path.basename(left_path)), resize_canvas)
+
     def train_random_batch(self, batch_size=4):
         # Random select samples
         indexes = np.random.random_integers(low=0, high=self.num_train-1, size=batch_size)
@@ -185,7 +238,24 @@ class Dataset(object):
         right_img_paths = [self.train_right_img_paths[index] for index in indexes]
         # Read imgs and labels
         batch_imgs = self.data_reader(left_img_paths, right_img_paths)
-        batch_labels = np.asarray([self.train_labels[index] for index in indexes])
+        batch_labels = np.reshape(np.asarray([self.train_labels[index] for index in indexes]), (-1, 1))
+
+        return batch_imgs, batch_labels
+
+    def direct_batch(self, batch_size, start_index, stage='val'):
+        if start_index + batch_size < self.num_val:
+            end_index = start_index + batch_size
+        else:
+            end_index = self.num_val
+
+        # Select indexes
+        indexes = [idx for idx in range(start_index, end_index)]
+        # Select img paths
+        left_img_paths = [self.val_left_img_paths[index] for index in indexes]
+        right_img_paths = [self.val_right_img_paths[index] for index in indexes]
+        # Read imgs and labels
+        batch_imgs = self.data_reader(left_img_paths, right_img_paths)
+        batch_labels = np.reshape(np.asarray([self.val_labels[index] for index in indexes]), (-1, 1))
 
         return batch_imgs, batch_labels
 
