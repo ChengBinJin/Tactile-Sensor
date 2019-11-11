@@ -36,12 +36,13 @@ class Solver(object):
         total_loss_op = self.model.total_loss
         data_loss_op = self.model.data_loss
         reg_term_op = self.model.reg_term
+        batch_acc_op = self.model.batch_acc
         summary_op = self.model.summary_op
 
-        _, total_loss, data_loss, reg_term, summary = self.sess.run(
-            [train_op, total_loss_op, data_loss_op, reg_term_op, summary_op], feed_dict=feed)
+        _, total_loss, data_loss, reg_term, batch_acc, summary = self.sess.run(
+            [train_op, total_loss_op, data_loss_op, reg_term_op, batch_acc_op, summary_op], feed_dict=feed)
 
-        return total_loss, data_loss, reg_term, summary
+        return total_loss, data_loss, reg_term, batch_acc, summary
 
     def eval(self, batch_size=4):
         print(' [*] Evaluate on the validation dataset...')
@@ -59,8 +60,6 @@ class Solver(object):
             }
 
             _, pred_cls = self.sess.run([self.model.accuracy_metric_update, self.model.preds_cls], feed_dict=feed)
-            print('Preds: {}'.format(pred_cls))
-            print('label_val: {}'.format(label_vals))
 
         # Calculate the accuracy
         acc, summary = self.sess.run([self.model.accuracy_metric, self.model.metric_summary_op])

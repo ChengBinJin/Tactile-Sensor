@@ -46,6 +46,8 @@ class ResNet18(object):
         # Network forward for training
         self.preds = self.forward_network(input_img=self.normalize(self.img_tfph), reuse=False)
         self.preds_cls = tf.math.argmax(self.preds, axis=-1, output_type=tf.dtypes.int32)
+        self.batch_acc = tf.math.reduce_mean(
+            tf.dtypes.cast(tf.equal(self.preds_cls, tf.squeeze(self.label_tfph, axis=-1)), dtype=tf.float32))
 
         # Data loss
         self.data_loss = tf.math.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(
@@ -185,7 +187,9 @@ class ResNet18(object):
 
     def convert_to_one_hot(self, data):
         data = tf.dtypes.cast(data, dtype=tf.dtypes.int32)
-        return tf.one_hot(data, depth=self.num_classes, name='convert_one_hot')
+        data = tf.one_hot(data, depth=self.num_classes, name='convert_one_hot')
+        data = tf.reshape(data, shape=[-1, self.num_classes])
+        return data
 
     @staticmethod
     def fixed_padding(inputs, kernel_size):

@@ -20,16 +20,16 @@ import utils as utils
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
-tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
+tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .jpg')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 8, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
-tf.flags.DEFINE_string('domain', 'rarb', 'data domtain for [xy | rarb], default: xy')
-tf.flags.DEFINE_string('data', '02', 'data folder name, default: 02')
+tf.flags.DEFINE_string('domain', 'xy', 'data domtain for [xy | rarb], default: xy')
+tf.flags.DEFINE_string('data', '01', 'data folder name, default: 02')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
-tf.flags.DEFINE_integer('epoch', 1, 'number of epochs, default: 100')
+tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
 tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 1')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
@@ -118,7 +118,7 @@ def main(_):
     if FLAGS.is_train is True:
         train(solver, saver, logger, model_dir, log_dir)
     else:
-        test(solver, saver, model_dir, log_dir)
+        test(solver, saver, model_dir)
 
 
 def train(solver, saver, logger, model_dir, log_dir):
@@ -167,8 +167,15 @@ def train(solver, saver, logger, model_dir, log_dir):
         iter_time += 1
 
 
-def test(solver, saver, model_dir, log_dir):
-    print("Hello test!")
+def test(solver, saver, model_dir):
+    if FLAGS.load_model is not None:
+        flag, iter_time = load_model(saver=saver, solver=solver, model_dir=model_dir)
+        if flag is True:
+            print(' [!] Load Success! Iter: {}'.format(iter_time))
+        else:
+            exit(' [!] Failed to restore model {}'.format(FLAGS.load_model))
+
+    solver.test_eval(batch_size=FLAGS.batch_size)
 
 
 def save_model(saver, solver, logger, model_dir, iter_time, best_rmse):

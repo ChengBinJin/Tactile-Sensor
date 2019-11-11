@@ -85,27 +85,27 @@ def main(_):
                    resize_factor=FLAGS.resize_factor,
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
-                   is_debug=False)
+                   is_debug=True)
 
-    # Initialize model
-    model = ResNet18(input_shape=data.input_shape,
-                     num_classes=5,
-                     lr=FLAGS.learning_rate,
-                     weight_decay=FLAGS.weight_decay,
-                     total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
-                     is_train=FLAGS.is_train,
-                     log_dir=log_dir)
-
-    # Initialize solver
-    solver = Solver(model, data)
-
-    # Initialize saver
-    saver = tf.compat.v1.train.Saver(max_to_keep=1)
-
-    if FLAGS.is_train is True:
-        train(solver, saver, logger, model_dir, log_dir)
-    else:
-        test(solver, saver, model_dir, log_dir)
+    # # Initialize model
+    # model = ResNet18(input_shape=data.input_shape,
+    #                  num_classes=5,
+    #                  lr=FLAGS.learning_rate,
+    #                  weight_decay=FLAGS.weight_decay,
+    #                  total_iters=int(np.ceil(FLAGS.epoch * data.num_train / FLAGS.batch_size)),
+    #                  is_train=FLAGS.is_train,
+    #                  log_dir=log_dir)
+    #
+    # # Initialize solver
+    # solver = Solver(model, data)
+    #
+    # # Initialize saver
+    # saver = tf.compat.v1.train.Saver(max_to_keep=1)
+    #
+    # if FLAGS.is_train is True:
+    #     train(solver, saver, logger, model_dir, log_dir)
+    # else:
+    #     test(solver, saver, model_dir, log_dir)
 
 
 def train(solver, saver, logger, model_dir, log_dir):
@@ -125,12 +125,12 @@ def train(solver, saver, logger, model_dir, log_dir):
     tb_writer = tf.compat.v1.summary.FileWriter(logdir=log_dir, graph=solver.sess.graph_def)
 
     while iter_time < total_iters:
-        total_loss, data_loss, reg_term, summary = solver.train(batch_size=FLAGS.batch_size)
+        total_loss, data_loss, reg_term, batch_acc, summary = solver.train(batch_size=FLAGS.batch_size)
 
         # Print loss information
         if iter_time % FLAGS.print_freq == 0:
-            msg = "[{0:5} / {1:5}] Total loss: {2:.3f}, Data loss: {3:.3f}, Reg. term: {4:.5f}"
-            print(msg.format(iter_time, total_iters, total_loss, data_loss, reg_term))
+            msg = "[{0:5} / {1:5}] Total loss: {2:.3f}, Data loss: {3:.3f}, Reg. term: {4:.5f}, Batch acc. {5:.2%}"
+            print(msg.format(iter_time, total_iters, total_loss, data_loss, reg_term, batch_acc))
 
             # Write to tensorbaord
             tb_writer.add_summary(summary, iter_time)

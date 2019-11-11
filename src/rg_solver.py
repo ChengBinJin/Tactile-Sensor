@@ -67,3 +67,25 @@ class Solver(object):
                                                     self.model.gt_tfph: gts_total})
 
         return avg_err, summary
+
+    def test_eval(self, batch_size=4):
+        print(' [*] Evaluate on the test dataset...')
+
+        preds_total = np.zeros((self.data.num_test, self.data.num_attribute), dtype=np.float32)
+        gts_total = np.zeros((self.data.num_test, self.data.num_attribute), dtype=np.float32)
+
+        for i, index in enumerate(range(0, self.data.num_test, batch_size)):
+            print('[{}/{}] processing...'.format(i + 1, (self.data.num_test // batch_size) + 1))
+
+            img_tests, label_tests = self.data.direct_batch(batch_size=batch_size, start_index=index, stage='test')
+            num_imgs = img_tests.shape[0]
+
+            feed = {
+                self.model.img_tfph: img_tests,
+                self.model.gt_tfph: label_tests
+            }
+            unnorm_preds, unnorm_gts = self.sess.run([self.model.unnorm_preds, self.model.unnorm_gts], feed_dict=feed)
+
+            # Save unnormalized labels for using evaluation
+            preds_total[i * batch_size :i * batch_size + num_imgs] = unnorm_preds
+            gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
