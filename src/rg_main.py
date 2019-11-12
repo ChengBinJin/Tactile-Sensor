@@ -5,6 +5,7 @@
 # Email: sbkim0407@gmail.com
 # --------------------------------------------------------------------------
 import os
+import time
 import math
 import xlsxwriter
 import logging
@@ -176,13 +177,23 @@ def test(solver, saver, model_dir):
         else:
             exit(' [!] Failed to restore model {}'.format(FLAGS.load_model))
 
-    preds, gts = solver.test_eval(batch_size=FLAGS.batch_size)
+    tic = time.time()
+    preds, gts = solver.test_eval(batch_size=1)
+    total_pt = time.time() - tic
+    avg_pt = total_pt / solver.data.num_test * 1000
+    print(' [*] Avg. processing time: {:.3f} msec. {:.2f} FPS'.format(avg_pt, (1000. / avg_pt)))
+
+    print(' [*] Writing excel...')
     write_to_csv(preds, gts, solver)
+    print(' [!] Finished to write!')
 
 
-def write_to_csv(preds, gts, solver):
+def write_to_csv(preds, gts, solver, save_folder='../result'):
+    if not os.path.isdir(save_folder):
+        os.makedirs(save_folder)
+
     # Create a workbook and add a worksheet
-    xlsx_name = FLAGS.domain + '_data' + FLAGS.data + '_' + FLAGS.load_model + '.xlsx'
+    xlsx_name = os.path.join(save_folder, FLAGS.domain + '_data' + FLAGS.data + '_' + FLAGS.load_model + '.xlsx')
     workbook = xlsxwriter.Workbook(os.path.join('./', xlsx_name))
     xlsFormat = workbook.add_format()
     xlsFormat.set_align('center')
