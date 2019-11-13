@@ -21,17 +21,18 @@ import utils as utils
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
-tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only one camera input, default: 0')
-tf.flags.DEFINE_string('img_format', '.png', 'image format, default: .jpg')
+tf.flags.DEFINE_integer('mode', 1, '0 for left-and-right input, 1 for only left image, 2 for only right image input, '
+                                   'default: 1')
+tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
 tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
-tf.flags.DEFINE_string('domain', 'xy', 'data domtain for [xy | rarb], default: xy')
-tf.flags.DEFINE_string('data', '01', 'data folder name, default: 02')
+tf.flags.DEFINE_string('domain', 'rarb', 'data domtain for [xy | rarb], default: xy')
+tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
-tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
+tf.flags.DEFINE_integer('epoch', 1000, 'number of epochs, default: 100')
 tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 1')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
@@ -40,36 +41,36 @@ tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish 
 def print_main_parameters(logger, flags):
     if flags.is_train:
         logger.info('\nmain func parameters:')
-        logger.info('gpu_index: \t\t{}'.format(flags.gpu_index))
-        logger.info('mode: \t\t{}'.format(flags.mode))
-        logger.info('img_format: \t\t{}'.format(flags.img_format))
-        logger.info('use_batchnorm: \t{}'.format(flags.use_batchnorm))
-        logger.info('batch_size: \t\t{}'.format(flags.batch_size))
-        logger.info('resize_factor: \t{}'.format(flags.resize_factor))
-        logger.info('domain: \t\t{}'.format(flags.domain))
-        logger.info('data: \t\t{}'.format(flags.data))
-        logger.info('is_train: \t\t{}'.format(flags.is_train))
-        logger.info('learning_rate: \t{}'.format(flags.learning_rate))
-        logger.info('weight_decay: \t{}'.format(flags.weight_decay))
-        logger.info('epoch: \t\t{}'.format(flags.epoch))
-        logger.info('print_freq: \t\t{}'.format(flags.print_freq))
-        logger.info('load_model: \t\t{}'.format(flags.load_model))
+        logger.info('gpu_index: \t\t\t{}'.format(flags.gpu_index))
+        logger.info('mode: \t\t\t{}'.format(flags.mode))
+        logger.info('img_format: \t\t\t{}'.format(flags.img_format))
+        logger.info('use_batchnorm: \t\t{}'.format(flags.use_batchnorm))
+        logger.info('batch_size: \t\t\t{}'.format(flags.batch_size))
+        logger.info('resize_factor: \t\t{}'.format(flags.resize_factor))
+        logger.info('domain: \t\t\t{}'.format(flags.domain))
+        logger.info('data: \t\t\t{}'.format(flags.data))
+        logger.info('is_train: \t\t\t{}'.format(flags.is_train))
+        logger.info('learning_rate: \t\t{}'.format(flags.learning_rate))
+        logger.info('weight_decay: \t\t{}'.format(flags.weight_decay))
+        logger.info('epoch: \t\t\t{}'.format(flags.epoch))
+        logger.info('print_freq: \t\t\t{}'.format(flags.print_freq))
+        logger.info('load_model: \t\t\t{}'.format(flags.load_model))
     else:
         print('main func parameters:')
-        print('-- gpu_index: \t\t{}'.format(flags.gpu_index))
-        print('-- mode: \t\t{}'.format(flags.mode))
-        print('-- format: \t\t{}'.format(flags.img_format))
-        print('-- use_batchnorm: \t{}'.format(flags.use_batchnorm))
-        print('-- batch_size: \t\t{}'.format(flags.batch_size))
-        print('-- resize_factor: \t{}'.format(flags.resize_factor))
-        print('-- domain: \t\t{}'.format(flags.domain))
-        print('-- data: \t\t{}'.format(flags.data))
-        print('-- is_train: \t\t{}'.format(flags.is_train))
-        print('-- learning_rate: \t{}'.format(flags.learning_rate))
-        print('-- weight_decay: \t{}'.format(flags.weight_decay))
-        print('-- epoch: \t\t{}'.format(flags.epoch))
-        print('-- print_freq: \t\t{}'.format(flags.print_freq))
-        print('-- load_model: \t\t{}'.format(flags.load_model))
+        print('-- gpu_index: \t\t\t{}'.format(flags.gpu_index))
+        print('-- mode: \t\t\t{}'.format(flags.mode))
+        print('-- format: \t\t\t{}'.format(flags.img_format))
+        print('-- use_batchnorm: \t\t{}'.format(flags.use_batchnorm))
+        print('-- batch_size: \t\t\t{}'.format(flags.batch_size))
+        print('-- resize_factor: \t\t{}'.format(flags.resize_factor))
+        print('-- domain: \t\t\t{}'.format(flags.domain))
+        print('-- data: \t\t\t{}'.format(flags.data))
+        print('-- is_train: \t\t\t{}'.format(flags.is_train))
+        print('-- learning_rate: \t\t{}'.format(flags.learning_rate))
+        print('-- weight_decay: \t\t{}'.format(flags.weight_decay))
+        print('-- epoch: \t\t\t{}'.format(flags.epoch))
+        print('-- print_freq: \t\t\t{}'.format(flags.print_freq))
+        print('-- load_model: \t\t\t{}'.format(flags.load_model))
 
 
 def main(_):
@@ -92,12 +93,13 @@ def main(_):
     # Initialize dataset
     data = Dataset(data=FLAGS.data,
                    mode=FLAGS.mode,
+                   domain=FLAGS.domain,
                    img_format=FLAGS.img_format,
                    resize_factor=FLAGS.resize_factor,
                    num_attribute=6,  # X, Y, Ra, Rb, F, D
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
-                   is_debug=True)
+                   is_debug=False)
 
     # Initialize model
     model = ResNet18_Revised(input_shape=data.input_shape,

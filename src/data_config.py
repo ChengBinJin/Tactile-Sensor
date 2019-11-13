@@ -10,13 +10,13 @@ import numpy as np
 import utils as utils
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--data', dest='data', type=str, default='01', help='select data folder')
-parser.add_argument('--format', dest='format', type=str, default='.png', help='decide image data format')
+parser.add_argument('--domain', dest='domain', type=str, default='xy', help='select data folder')
+parser.add_argument('--format', dest='format', type=str, default='.jpg', help='decide image data format')
 args = parser.parse_args()
 
 
-def main(data_id, num_attri=6):
-    data_folder = os.path.join('../data', 'rg_train' + data_id)
+def main(domain, num_attri=6):
+    data_folder = os.path.join('../data', 'rg_' + domain + '_train_01')
     left_img_paths = utils.all_files_under(folder=data_folder, endswith=args.format, condition='L_')
 
     num_imgs = len(left_img_paths)
@@ -52,4 +52,4 @@ def main(data_id, num_attri=6):
     np.save(data_folder, min_max_data)
 
 if __name__ == '__main__':
-    main(args.data)
+    main(args.domain)
