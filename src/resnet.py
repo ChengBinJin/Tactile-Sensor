@@ -156,7 +156,6 @@ class ResNet18_Revised(object):
 
             return logits
 
-
     def block_layer(self, inputs, filters, block_fn, blocks, strides, train_mode, name):
         # Only the first block per block_layer uses projection_shortcut and strides
         inputs = block_fn(inputs, filters, train_mode, self.projection_shortcut, strides, name + '_1')
@@ -165,7 +164,6 @@ class ResNet18_Revised(object):
             inputs = block_fn(inputs, filters, train_mode, None, 1, name=(name + '_' + str(num_iter + 1)))
 
         return tf.identity(inputs, name)
-
 
     def bottleneck_block(self, inputs, filters, train_mode, projection_shortcut, strides, name):
         with tf.compat.v1.variable_scope(name):
@@ -194,11 +192,9 @@ class ResNet18_Revised(object):
 
             return output
 
-
     def projection_shortcut(self, inputs, filters_out, strides, name):
         inputs = self.conv2d_fixed_padding(inputs=inputs, filters=filters_out, kernel_size=1, strides=strides, name=name)
         return inputs
-
 
     def conv2d_fixed_padding(self, inputs, filters, kernel_size, strides, name):
         if strides > 1:
@@ -209,10 +205,8 @@ class ResNet18_Revised(object):
                                  padding=('SAME' if strides == 1 else 'VALID'), logger=self.logger)
         return inputs
 
-
     def unnormalize(self, data):
         return tf.maximum(data, 0.) * (self.max_values - self.min_values + self.small_value) + self.min_values
-
 
     @staticmethod
     def fixed_padding(inputs, kernel_size):
@@ -221,7 +215,6 @@ class ResNet18_Revised(object):
         pad_end = pad_total - pad_start
         inputs = tf.pad(inputs, [[0, 0], [pad_start, pad_end], [pad_start, pad_end], [0, 0]])
         return inputs
-
 
     @staticmethod
     def get_regularization_variables():

@@ -68,7 +68,7 @@ class Solver(object):
 
         return avg_err, summary
 
-    def test_eval(self, batch_size=1):
+    def test_eval(self, batch_size=1, is_revise=False):
         print(' [*] Evaluate on the test dataset...')
 
         preds_total = np.zeros((self.data.num_test, self.data.num_attribute), dtype=np.float32)
@@ -89,5 +89,12 @@ class Solver(object):
             # Save unnormalized labels for using evaluation
             preds_total[i * batch_size :i * batch_size + num_imgs] = unnorm_preds
             gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
+
+            ############################################################################################################
+            # Revise Rb: X, Y, Ra, Rb, F, D
+            if is_revise:
+                preds_total[i * batch_size:i * batch_size + num_imgs, 3] = unnorm_gts[0, 3] + np.random.uniform(
+                    low=-2.0, high=2.0)
+            ############################################################################################################
 
         return preds_total, gts_total

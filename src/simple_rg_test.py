@@ -58,7 +58,7 @@ def main(_):
         exit(' [!] Failed to restore model {}'.format(model_dir))
 
     tic = time.time()
-    preds, gts = solver.test_eval(batch_size=1)
+    preds, gts = solver.test_eval(batch_size=1, is_revise=True if FLAGS.domain == 'rarb' else False)
     total_pt = time.time() - tic
     avg_pt = total_pt / solver.data.num_test * 1000
     fps = (1000. / avg_pt)
@@ -68,7 +68,6 @@ def main(_):
     print(' [*] Writing excel...')
     write_to_csv(preds, gts, solver)
     print(' [!] Finished to write!')
-
 
 def write_to_csv(preds, gts, solver, save_folder='../result'):
     if not os.path.isdir(save_folder):
