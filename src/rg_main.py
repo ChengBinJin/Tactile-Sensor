@@ -25,14 +25,14 @@ tf.flags.DEFINE_integer('mode', 1, '0 for left-and-right input, 1 for only left 
                                    'default: 1')
 tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
-tf.flags.DEFINE_integer('batch_size', 256, 'batch size for one iteration, default: 256')
+tf.flags.DEFINE_integer('batch_size', 128, 'batch size for one iteration, default: 256')
 tf.flags.DEFINE_float('resize_factor', 0.5, 'resize the original input image, default: 0.5')
-tf.flags.DEFINE_string('domain', 'rarb', 'data domtain for [xy | rarb], default: xy')
+tf.flags.DEFINE_string('domain', 'xy', 'data domtain for [xy | rarb], default: xy')
 tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
-tf.flags.DEFINE_integer('epoch', 1000, 'number of epochs, default: 100')
+tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
 tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 1')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
@@ -195,7 +195,7 @@ def write_to_csv(preds, gts, solver, save_folder='../result'):
         os.makedirs(save_folder)
 
     # Create a workbook and add a worksheet
-    xlsx_name = os.path.join(save_folder, FLAGS.domain + '_data' + FLAGS.data + '_' + FLAGS.load_model + '.xlsx')
+    xlsx_name = os.path.join(save_folder, FLAGS.domain + '_data_' + FLAGS.data + '_' + FLAGS.load_model + '.xlsx')
     workbook = xlsxwriter.Workbook(os.path.join('./', xlsx_name))
     xlsFormat = workbook.add_format()
     xlsFormat.set_align('center')

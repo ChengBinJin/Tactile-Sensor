@@ -51,7 +51,6 @@ class ResNet18_Revised(object):
         self._init_tensorboard()
         tf_utils.show_all_variables(logger=self.logger if self.is_train else None)
 
-
     def _build_graph(self):
         self.img_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, *self.input_shape], name='img_tfph')
         self.gt_tfph = tf.compat.v1.placeholder(dtype=tf.dtypes.float32, shape=[None, self.num_attribute], name='gt_tfph')
@@ -77,12 +76,10 @@ class ResNet18_Revised(object):
         train_ops = [train_op] + self._ops
         self.train_op = tf.group(*train_ops)
 
-
     def _eval_graph(self):
         # Evalaution
         self.eval_ops = tf.math.reduce_mean(tf.math.sqrt(tf.math.square(self.pred_tfph - self.gt_tfph)), axis=0)
         self.avg_err = tf.math.reduce_mean(self.eval_ops)
-
 
     def _init_tensorboard(self):
         if self.is_train:
@@ -100,7 +97,6 @@ class ResNet18_Revised(object):
                 tf.compat.v1.summary.scalar('Eval/F_err', self.eval_ops[4]),
                 tf.compat.v1.summary.scalar('Eval/D_err', self.eval_ops[5]),
                 tf.compat.v1.summary.scalar('Eval/avg_err', self.avg_err)])
-
 
     def init_optimizer(self, loss, name='Adam'):
         with tf.compat.v1.variable_scope(name):
@@ -123,11 +119,10 @@ class ResNet18_Revised(object):
 
         return learn_step
 
-
     def forward_network(self, input_img, reuse=False):
         with tf.compat.v1.variable_scope(self.name, reuse=reuse):
             tf_utils.print_activations(input_img, logger=self.logger)
-            inputs = self.conv2d_fixed_padding(inputs=input_img, filters=64, kernel_size=7, strides=2, name='conv1')
+            inputs = self.conv2d_fixed_padding(inputs=input_img, filters=64, kernel_size=7, strides=1, name='conv1')
             inputs = tf_utils.max_pool(inputs, name='3x3_maxpool', ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                                        logger=self.logger)
 
@@ -216,7 +211,7 @@ class ResNet18_Revised(object):
 
 
     def unnormalize(self, data):
-        return data * (self.max_values - self.min_values + self.small_value) + self.min_values
+        return tf.maximum(data, 0.) * (self.max_values - self.min_values + self.small_value) + self.min_values
 
 
     @staticmethod
