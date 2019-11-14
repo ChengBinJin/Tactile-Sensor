@@ -12,8 +12,8 @@ import utils as utils
 
 
 class Dataset(object):
-    def __init__(self, data, mode=0, domain='xy', img_format='.jpg', resize_factor=0.5, num_attribute=6, is_train=True,
-                 log_dir=None, is_debug=False):
+    def __init__(self, data=None, mode=0, domain='xy', img_format='.jpg', resize_factor=0.5, num_attribute=6,
+                 is_train=True, log_dir=None, is_debug=False, test_data_folder=None):
         self.data= data
         self.mode = mode
         self.domain = domain
@@ -22,6 +22,7 @@ class Dataset(object):
         self.is_train = is_train
         self.log_dir = log_dir
         self.is_debug = is_debug
+        self.test_data_folder = test_data_folder
         self.top_left = (20, 100)
         self.bottom_right = (390, 515)
         self.binarize_threshold = 55.
@@ -90,7 +91,7 @@ class Dataset(object):
             print('is_debug: \t\t\t{}'.format(self.is_debug))
             print('top_left: \t\t\t{}'.format(self.top_left))
             print('bottom_right: \t\t\t{}'.format(self.bottom_right))
-            print('binarize_threshold: \t\t\t{}'.format(self.binarize_threshold))
+            print('binarize_threshold: \t\t{}'.format(self.binarize_threshold))
             print('Num. of train samples: \t\t{}'.format(self.num_train))
             print('Num. of val samples: \t\t{}'.format(self.num_val))
             print('Numo of test samples: \t\t{}'.format(self.num_test))
@@ -201,11 +202,18 @@ class Dataset(object):
             self.train_left_img_paths = utils.all_files_under(
                 folder=os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data),
                 endswith=self.img_format, condition='L_')
+            self.train_left_img_paths = utils.all_files_under(
+                folder=os.path.join('../data', self.test_data_folder),
+                endswith=self.img_format, condition='L_')
 
         if self.mode == 0 or self.mode == 2:
             self.train_right_img_paths = utils.all_files_under(
                 folder=os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data),
                 endswith=self.img_format, condition='R_')
+            self.train_right_img_paths = utils.all_files_under(
+                folder=os.path.join('../data', self.test_data_folder),
+                endswith=self.img_format, condition='R_')
+
 
         if self.mode == 0:
             assert len(self.train_left_img_paths) == len(self.train_right_img_paths)
@@ -240,14 +248,24 @@ class Dataset(object):
 
     def _read_test_img_path(self):
         if self.mode == 0 or self.mode == 1:
-            self.test_left_img_paths = utils.all_files_under(
-                folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
-                endswith=self.img_format, condition='L_')
+            if self.test_data_folder is None:
+                self.test_left_img_paths = utils.all_files_under(
+                    folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
+                    endswith=self.img_format, condition='L_')
+            else:
+                self.test_left_img_paths = utils.all_files_under(
+                    folder=os.path.join('../data', self.test_data_folder),
+                    endswith=self.img_format, condition='L_')
 
         if self.mode == 0 or self.mode == 2:
-            self.test_right_img_paths = utils.all_files_under(
-                folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
-                endswith=self.img_format, condition='R_')
+            if self.test_data_folder is None:
+                self.test_right_img_paths = utils.all_files_under(
+                    folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
+                    endswith=self.img_format, condition='R_')
+            else:
+                self.test_right_img_paths = utils.all_files_under(
+                    folder=os.path.join('../data', self.test_data_folder),
+                    endswith=self.img_format, condition='R_')
 
         if self.mode == 0:
             assert len(self.test_left_img_paths) == len(self.test_right_img_paths)

@@ -16,17 +16,18 @@ from rg_solver import Solver
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
-tf.flags.DEFINE_string('img_format', '.jpg', 'image format [.jpg | .png], default: .jpg')
 tf.flags.DEFINE_string('domain', 'xy', 'data domain for [xy | rarb], default: xy')
+tf.flags.DEFINE_string('data_folder', 'rg_rarb_test_01', 'select data_folder, default: rg_rarb_test_01')
 
 
 def main(_):
     os.environ["CUDA_VISIBLE_DEVICES"] = FLAGS.gpu_index
 
     # Initialize dataset
-    data = Dataset(data='01' if FLAGS.domain == 'xy' else '02',
-                   img_format=FLAGS.img_format,
-                   is_train=False)
+    data = Dataset(mode=1,
+                   domain=FLAGS.domain,
+                   is_train=False,
+                   test_data_folder=FLAGS.data_folder)
 
     # Initialize model
     model = ResNet18_Revised(input_shape=data.input_shape,
@@ -43,9 +44,9 @@ def main(_):
 
     # Decide the model folder
     if FLAGS.domain == 'xy':
-        model_dir = '../model/20191111-094035'
+        model_dir = '../model/20191114-'
     elif FLAGS.domain == 'rarb':
-        model_dir = '../model/20191110-211525'
+        model_dir = '../model/20191114-110556'
     else:
         raise NotImplementedError
 
@@ -60,19 +61,21 @@ def main(_):
     preds, gts = solver.test_eval(batch_size=1)
     total_pt = time.time() - tic
     avg_pt = total_pt / solver.data.num_test * 1000
-    print(' [*] Avg. processing time: {:.3f} msec. {:.2f} FPS'.format(avg_pt, (1000. / avg_pt)))
+    fps = (1000. / avg_pt)
+    if fps > 30.:
+        print(' [*] Avg. processing time: {:.3f} msec. {:.2f} FPS'.format(avg_pt, (1000. / avg_pt)))
 
     print(' [*] Writing excel...')
-    write_to_csv(preds, gts, solver, model_dir=model_dir.split('/')[-1])
+    write_to_csv(preds, gts, solver)
     print(' [!] Finished to write!')
 
 
-def write_to_csv(preds, gts, solver, model_dir, save_folder='../result'):
+def write_to_csv(preds, gts, solver, save_folder='../result'):
     if not os.path.isdir(save_folder):
         os.makedirs(save_folder)
 
     # Create a workbook and add a worksheet
-    xlsx_name = os.path.join(save_folder, FLAGS.domain + '_data' + solver.data.data + '_' + model_dir + '.xlsx')
+    xlsx_name = os.path.join(save_folder, FLAGS.data_folder + '.xlsx')
     workbook = xlsxwriter.Workbook(os.path.join('./', xlsx_name))
     xlsFormat = workbook.add_format()
     xlsFormat.set_align('center')
