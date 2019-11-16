@@ -17,7 +17,8 @@ from rg_solver import Solver
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_string('domain', 'xy', 'data domain for [xy | rarb], default: xy')
-tf.flags.DEFINE_string('data_folder', 'rg_rarb_test_01', 'select data_folder, default: rg_rarb_test_01')
+tf.flags.DEFINE_string('data_folder', 'rg_rarb_test_01', 'select data_folder [rg_rarb_test_01, rg_xy_test_01], '
+                                                         'default: rg_rarb_test_01')
 
 
 def main(_):
@@ -44,7 +45,7 @@ def main(_):
 
     # Decide the model folder
     if FLAGS.domain == 'xy':
-        model_dir = '../model/20191114-'
+        model_dir = '../model/20191114-210545'
     elif FLAGS.domain == 'rarb':
         model_dir = '../model/20191114-110556'
     else:
