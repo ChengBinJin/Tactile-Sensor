@@ -85,6 +85,11 @@ def write_to_csv(preds, gts, solver, save_folder='../result'):
     l2_error = np.sqrt(np.square(preds - gts))
     avg_error = np.mean(l2_error, axis=0)
 
+    # Calculate FSO
+    max_error = np.max(l2_error[:, -2])
+    max_force = np.max(gts[:, -2])
+    FSO = max_error / max_force
+
     data_list = [('preds', preds), ('gts', gts), ('l2_error', l2_error)]
     attributes = ['No', 'Name', 'X', 'Y', 'Ra', 'Rb', 'F', 'D']
     for file_name, data in data_list:
@@ -106,6 +111,9 @@ def write_to_csv(preds, gts, solver, save_folder='../result'):
             worksheet.write(solver.data.num_test + 1, 1, 'average error', xlsFormat)
             for attr_idx in range(solver.data.num_attribute):
                 worksheet.write(solver.data.num_test + 1, attr_idx + 2, avg_error[attr_idx], xlsFormat)
+
+            worksheet.write(solver.data.num_test + 2, 1, 'FSO', xlsFormat)
+            worksheet.write(solver.data.num_test + 2, 2, FSO, xlsFormat)
 
     workbook.close()
 
