@@ -91,7 +91,8 @@ class Solver(object):
             gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
 
             ############################################################################################################
-            # Revise Rb: X, Y, Ra, Rb, F, D
+            # Correction Rb trick
+            # X, Y, Ra, Rb, F, D
             if is_revise:
                 preds_total[i * batch_size:i * batch_size + num_imgs, 3] = unnorm_gts[0, 3] + np.random.uniform(
                     low=-2.0, high=2.0)
