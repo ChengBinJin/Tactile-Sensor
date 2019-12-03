@@ -11,5 +11,8 @@ src/img/
 src/results/
 backup/
 debug/
-demo/
+demo/data
+demo/model
+demo/src/.idea
+demo/src/__pycache__
 result/
