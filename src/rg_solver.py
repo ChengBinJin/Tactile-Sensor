@@ -90,12 +90,12 @@ class Solver(object):
             preds_total[i * batch_size :i * batch_size + num_imgs] = unnorm_preds
             gts_total[i * batch_size :i * batch_size + num_imgs] = unnorm_gts
 
-            ############################################################################################################
-            # Correction Rb trick
-            # X, Y, Ra, Rb, F, D
-            if is_revise:
-                preds_total[i * batch_size:i * batch_size + num_imgs, 3] = unnorm_gts[0, 3] + np.random.uniform(
-                    low=-2.0, high=2.0)
-            ############################################################################################################
+            # ############################################################################################################
+            # # Correction Rb trick
+            # # X, Y, Ra, Rb, F, D
+            # if is_revise:
+            #     preds_total[i * batch_size:i * batch_size + num_imgs, 3] = unnorm_gts[0, 3] + np.random.uniform(
+            #         low=-2.0, high=2.0)
+            # ############################################################################################################
 
         return preds_total, gts_total
