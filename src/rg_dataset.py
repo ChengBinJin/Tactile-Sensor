@@ -202,18 +202,11 @@ class Dataset(object):
             self.train_left_img_paths = utils.all_files_under(
                 folder=os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data),
                 endswith=self.img_format, condition='L_')
-            self.train_left_img_paths = utils.all_files_under(
-                folder=os.path.join('../data', self.test_data_folder),
-                endswith=self.img_format, condition='L_')
 
         if self.mode == 0 or self.mode == 2:
             self.train_right_img_paths = utils.all_files_under(
                 folder=os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data),
                 endswith=self.img_format, condition='R_')
-            self.train_right_img_paths = utils.all_files_under(
-                folder=os.path.join('../data', self.test_data_folder),
-                endswith=self.img_format, condition='R_')
-
 
         if self.mode == 0:
             assert len(self.train_left_img_paths) == len(self.train_right_img_paths)
@@ -262,6 +255,10 @@ class Dataset(object):
                 self.test_right_img_paths = utils.all_files_under(
                     folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
                     endswith=self.img_format, condition='R_')
+
+                self.test_left_img_paths = utils.all_files_under(
+                    folder=os.path.join('../data', 'rg_' + self.domain + '_test_' + self.data),
+                    endswith=self.img_format, condition='L_')
             else:
                 self.test_right_img_paths = utils.all_files_under(
                     folder=os.path.join('../data', self.test_data_folder),

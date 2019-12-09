@@ -32,7 +32,7 @@ tf.flags.DEFINE_string('data', '01', 'data folder name, default: 01')
 tf.flags.DEFINE_bool('is_train', True, 'training or inference mode, default: True')
 tf.flags.DEFINE_float('learning_rate', 1e-4, 'initial learning rate for optimizer, default: 0.0001')
 tf.flags.DEFINE_float('weight_decay', 1e-6, 'weight decay for model to handle overfitting, defautl: 1e-6')
-tf.flags.DEFINE_integer('epoch', 100, 'number of epochs, default: 100')
+tf.flags.DEFINE_integer('epoch', 200, 'number of epochs, default: 100')
 tf.flags.DEFINE_integer('print_freq', 1, 'print frequence for loss information, default: 1')
 tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training '
                                            '(e.g. 20191008-151952), default: None')
