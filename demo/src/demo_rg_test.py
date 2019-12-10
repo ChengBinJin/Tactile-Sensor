@@ -12,21 +12,35 @@ import tensorflow_utils as tf_utils
 
 
 class ResNet18(object):
-    def __init__(self, input_shape=(185, 208), num_attribute=6, mode=1, domain='xy', name='ResNet18'):
+    def __init__(self, input_shape=(185, 208), num_attribute=6, mode=1, domain='xy', abs_path=None, name='ResNet18'):
         self.input_shape = (*input_shape, 2 if mode == 0 else 1)
         self.num_attribute = num_attribute
         self.mode = mode
         self.domain = domain
+        self.abs_path = abs_path
         self.name = name
         self.layers = [2, 2, 2, 2]
         self.small_value = 1e-7
         self.sess = tf.compat.v1.Session()  # Initialize session
 
         # Model should be fixed in here
-        if self.mode == 1 and self.domain == 'xy':
-            self.model_dir = '../model/20191114-210545'
-        elif self.mode == 1 and self.domain == 'rarb':
-            self.model_dir = '../model/20191114-110556'
+        if self.mode == 0:  # left and right cameras
+            if self.domain == 'xy':
+                self.model_dir = '20191204-093934'
+            elif self.domain == 'rarb':
+                self.model_dir = '20191204-093942'
+        elif self.mode == 1:  # left camera only
+            if self.domain == 'xy':
+                self.model_dir = '20191205-095619'
+            elif self.domain == 'rarb':
+                self.model_dir = '20191205-095625'
+        elif self.mode == 2:  # right camera only
+            if self.domain == 'xy':
+                self.model_dir = '20191204-093954'
+            elif self.domain == 'rarb':
+                self.model_dir = '20191204-094002'
+        self.model_dir = os.path.join(self.abs_path, self.model_dir)
+
         self.data = '01'
 
         self._read_min_max_info()
@@ -49,6 +63,13 @@ class ResNet18(object):
         self.unnorm_preds = self.unnormalize(self.preds)
 
     def predict(self, left_img=None, right_img=None):
+        if self.mode == 0:      # left and right images
+            assert left_img is not None and right_img is not None, "[!] Mode-0 needs both left and right images!"
+        elif self.mode == 1:    # left image only
+            assert left_img is not None and right_img is None, "[!] Mode-1 needs left image only!"
+        elif self.mode == 2:    # right image only
+            assert left_img is None and right_img is not None, "[!] Mode-2 need right image only!"
+
         # Preprocessing
         pre_img = self.preprocessing(left_img, right_img)
         output = self.sess.run(self.unnorm_preds, feed_dict={self.img_tfph: np.expand_dims(pre_img, axis=0)})
@@ -162,7 +183,7 @@ class ResNet18(object):
         else:
             input_img = np.expand_dims(imgs[0], axis=-1)
 
-        print('input_img shape: {}'.format(input_img.shape))
+        # print('input_img shape: {}'.format(input_img.shape))
 
         return input_img
 
@@ -218,8 +239,8 @@ def main(left_path, right_path):
     ####################################################################################################################
 
     # Initialize model
-    model = ResNet18(mode=1, domain='xy')
-    pred = model.predict(left_img=left_img, right_img=None)
+    model = ResNet18(mode=2, domain='xy', abs_path='../model')
+    pred = model.predict(left_img=None, right_img=right_img)
 
     print('\nPrediction!')
     print('X:  {:.3f}'.format(pred[0]))
@@ -233,5 +254,8 @@ def main(left_path, right_path):
 if __name__ == '__main__':
     left_img_path = '../data/rg_xy_train_01/A5_L_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
     right_img_path = '../data/rg_xy_train_01/B5_R_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
+
+    # left_img_path = '../data/rg_rarb_train_01/A5_L_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
+    # right_img_path = '../data/rg_rarb_train_01/B5_R_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
 
     main(left_img_path, right_img_path)
