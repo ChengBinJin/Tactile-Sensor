@@ -23,8 +23,17 @@ class Dataset(object):
         self.log_dir = log_dir
         self.is_debug = is_debug
         self.test_data_folder = test_data_folder
-        self.top_left = (20, 100)
-        self.bottom_right = (390, 515)
+
+        if self.data == '01':
+            self.top_left = (20, 100)
+            self.bottom_right = (390, 515)
+        elif self.data == '02':
+            self.top_left = (35, 150)
+            self.bottom_right = (400, 510)
+        elif self.data == '03':
+            self.top_left = (15, 95)
+            self.bottom_right = (385, 535)
+
         self.binarize_threshold = 55.
         self.input_shape = (int(np.ceil(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.ceil(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))),
@@ -363,8 +372,9 @@ class Dataset(object):
         # Stage 3: Thresholding
         _, img_binary = cv2.threshold(img_gray, self.binarize_threshold, 255., cv2.THRESH_BINARY)
         # Stage 4: Resize img
-        img_resize = cv2.resize(img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
-                                     interpolation=cv2.INTER_NEAREST)
+        # img_resize = cv2.resize(img_binary, None, fx=self.resize_factor, fy=self.resize_factor,
+        #                              interpolation=cv2.INTER_NEAREST)
+        img_resize = cv2.resize(img_binary, (self.input_shape[1], self.input_shape[0]), interpolation=cv2.INTER_NEAREST)
         return img_resize
 
     def normalize(self, data):
