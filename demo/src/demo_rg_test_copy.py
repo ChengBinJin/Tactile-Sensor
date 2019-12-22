@@ -12,7 +12,7 @@ import tensorflow_utils as tf_utils
 
 
 class ResNet18(object):
-    def __init__(self, data='01', num_attribute=6, mode=1, domain='xy', abs_path=None, name='ResNet18'):
+    def __init__(self, data=None, num_attribute=6, mode=1, domain='xy', abs_path=None, name='ResNet18'):
         self.data = data
         self.num_attribute = num_attribute
         self.mode = mode
@@ -53,12 +53,30 @@ class ResNet18(object):
                 self.model_dir = '20191220-152653'
             else:
                 exit(' [*] Data_02 only has mode 1!')
+        elif self.data == '03':
+            self.top_left = (15, 95)
+            self.bottom_right = (385, 535)
+
+            if self.domain == 'xy':
+                if self.mode == 0:
+                    self.model_dir = '20191220-152745'
+                elif self.mode == 1:
+                    self.model_dir = '20191220-152754'
+                elif self.mode == 2:
+                    self.model_dir = '20191220-164212'
+            elif self.domain == 'rarb':
+                if self.mode == 0:
+                    self.model_dir = '20191220-195143'
+                elif self.mode == 1:
+                    self.model_dir = '20191220-211707'
+                elif self.mode == 2:
+                    self.model_dir = '20191221-111625'
 
         self.input_shape = (int(np.ceil(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.ceil(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))),
                             2 if self.mode == 0 else 1)
-        self.model_dir = os.path.join(self.abs_path, self.model_dir)
 
+        self.model_dir = os.path.join(self.abs_path, self.model_dir)
         self._read_min_max_info()
         self._build_graph()
 
@@ -175,8 +193,7 @@ class ResNet18(object):
     def unnormalize(self, data):
         return tf.maximum(data, 0.) * (self.max_values - self.min_values + self.small_value) + self.min_values
 
-    def preprocessing(self, left_img=None, right_img=None, resize_factor=0.5,
-                      binarize_threshold=55.):
+    def preprocessing(self, left_img=None, right_img=None, binarize_threshold=55.):
         imgs = list()
 
         for img in [left_img, right_img]:
@@ -188,12 +205,11 @@ class ResNet18(object):
                 # Stage 3: Thresholding
                 _, img_binary = cv2.threshold(img_gray, binarize_threshold, 255., cv2.THRESH_BINARY)
                 # Stage 4: Resize img
-                if self.data == '01':
-                    img_resize = cv2.resize(img_binary, None, fx=0.5, fy=0.5,
-                                            interpolation=cv2.INTER_NEAREST)
-                else:
-                    img_resize = cv2.resize(img_binary, (self.input_shape[1], self.input_shape[0]),
-                                            interpolation=cv2.INTER_NEAREST)
+                img_resize = cv2.resize(img_binary, (self.input_shape[1], self.input_shape[0]),
+                                        interpolation=cv2.INTER_NEAREST)
+
+                cv2.imshow('Show', img_resize)
+                cv2.waitKey(0)
 
                 imgs.append(img_resize)
 
@@ -208,7 +224,6 @@ class ResNet18(object):
         return input_img
 
     def _read_min_max_info(self):
-        print(os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data + '.npy'))
         min_max_data = np.load(os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data + '.npy'))
         self.x_min = min_max_data[0]
         self.x_max = min_max_data[1]
@@ -260,7 +275,7 @@ def main(left_path, right_path):
     ####################################################################################################################
 
     # Initialize model
-    model = ResNet18(data='02', mode=1, domain='xy', abs_path='../model')
+    model = ResNet18(data='01', domain='xy', mode=1, abs_path='../model')
     pred = model.predict(left_img=left_img, right_img=None)
 
     print('\nPrediction!')
@@ -273,13 +288,16 @@ def main(left_path, right_path):
 
 
 if __name__ == '__main__':
-    # left_img_path = '../data/rg_xy_train_01/A5_L_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
-    # right_img_path = '../data/rg_xy_train_01/B5_R_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
+    left_img_path = '../data/rg_xy_train_01/A5_L_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
+    right_img_path = '../data/rg_xy_train_01/B5_R_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
 
     # left_img_path = '../data/rg_rarb_train_01/A5_L_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
     # right_img_path = '../data/rg_rarb_train_01/B5_R_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
 
-    left_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
-    right_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
+    # left_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.220_D0.123.jpg'
+    # right_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
+
+    # left_img_path = '../data/rg_rarb_train_01/A5_L_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
+    # right_img_path = '../data/rg_rarb_train_01/B5_R_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
 
     main(left_img_path, right_img_path)

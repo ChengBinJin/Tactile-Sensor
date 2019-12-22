@@ -177,7 +177,7 @@ class Dataset(object):
             cv2.imwrite(os.path.join(save_folder, 's5_resize_' + os.path.basename(left_path)), resize_canvas)
 
     def _read_min_max_info(self):
-        min_max_data = np.load(os.path.join('../data', 'rg_' + self.domain + '_train_01' + '.npy'))
+        min_max_data = np.load(os.path.join('../data', 'rg_' + self.domain + '_train_' + self.data + '.npy'))
         self.x_min = min_max_data[0]
         self.x_max = min_max_data[1]
         self.y_min = min_max_data[2]

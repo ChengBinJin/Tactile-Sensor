@@ -23,7 +23,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_string('gpu_index', '0', 'gpu index if you have multiple gpus, default: 0')
 tf.flags.DEFINE_integer('mode', 0, '0 for left-and-right input, 1 for only left image, 2 for only right image input, '
                                    'default: 0')
-tf.flags.DEFINE_string('data', '01', 'data folder name[01: normal, 02: single, 03: 10N], default: 02')
+tf.flags.DEFINE_string('data', '03', 'data folder name[01: normal, 02: single, 03: 10N], default: 02')
 tf.flags.DEFINE_string('domain', 'xy', 'data domtain for [xy | rarb], default: xy')
 tf.flags.DEFINE_string('img_format', '.jpg', 'image format, default: .jpg')
 tf.flags.DEFINE_bool('use_batchnorm', False, 'use batchnorm or not in regression task, default: False')
@@ -99,7 +99,7 @@ def main(_):
                    num_attribute=6,  # X, Y, Ra, Rb, F, D
                    is_train=FLAGS.is_train,
                    log_dir=log_dir,
-                   is_debug=True)
+                   is_debug=False)
 
     # Initialize model
     model = ResNet18_Revised(input_shape=data.input_shape,
