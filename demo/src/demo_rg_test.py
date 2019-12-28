@@ -48,11 +48,29 @@ class ResNet18(object):
             self.bottom_right = (400, 510)
 
             if self.domain == 'xy' and self.mode == 1:
-                self.model_dir = '20191220-152645'
+                self.model_dir = '20191222-230515'
             elif self.domain == 'rarb' and self.mode == 1:
-                self.model_dir = '20191220-152653'
+                self.model_dir = '20191222-230520'
             else:
                 exit(' [*] Data_02 only has mode 1!')
+        elif self.data == '03':
+            self.top_left = (15, 95)
+            self.bottom_right = (385, 535)
+
+            if self.domain == 'xy':
+                if self.mode == 0:      # left and right cameras
+                    self.model_dir = "20191222-230522"
+                elif self.mode == 1:    # left camera only
+                    self.model_dir = "20191222-230523"
+                elif self.mode == 2:    # right camera only
+                    self.model_dir = "20191223-093631"
+            elif self.domain == 'rarb':
+                if self.mode == 0:
+                    self.model_dir = "20191223-180908"
+                elif self.mode == 1:
+                    self.model_dir = "20191223-202129"
+                elif self.mode == 2:
+                    self.model_dir = "20191224-090714"
 
         self.input_shape = (int(np.ceil(self.resize_factor * (self.bottom_right[0] - self.top_left[0]))),
                             int(np.ceil(self.resize_factor * (self.bottom_right[1] - self.top_left[1]))),
@@ -260,7 +278,7 @@ def main(left_path, right_path):
     ####################################################################################################################
 
     # Initialize model
-    model = ResNet18(data='02', mode=1, domain='xy', abs_path='../model')
+    model = ResNet18(data='03', mode=0, domain='xy', abs_path='../model')
     pred = model.predict(left_img=left_img, right_img=None)
 
     print('\nPrediction!')
@@ -273,13 +291,25 @@ def main(left_path, right_path):
 
 
 if __name__ == '__main__':
+    # Data: 01-xy
     # left_img_path = '../data/rg_xy_train_01/A5_L_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
     # right_img_path = '../data/rg_xy_train_01/B5_R_X-0.500_Y0.500_Z-1.054_Ra0.000_Rb0.000_F0.130_D0.049.jpg'
 
+    # Data: 01-rarb
     # left_img_path = '../data/rg_rarb_train_01/A5_L_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
     # right_img_path = '../data/rg_rarb_train_01/B5_R_X0.000_Y0.000_Z-0.213_Ra45.000_Rb30.000_F0.100_D0.069.jpg'
 
-    left_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
-    right_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
+    # Data: 02-xy
+    # left_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
+    # right_img_path = '../data/rg_xy_train_02/A1_L_X0.500_Y0.500_Z-0.988_Ra0.000_Rb0.000_F0.120_D0.015.jpg'
+
+    # Data: 02-rarb
+    # left_img_path = '../data/rg_rarb_train_02/A5_L_X0.000_Y0.000_Z-0.122_Ra45.000_Rb25.000_F0.100_D0.019.jpg'
+    # right_img_path = '../data/rg_rarb_train_02/A5_L_X0.000_Y0.000_Z-0.122_Ra45.000_Rb25.000_F0.100_D0.019.jpg'
+
+    # Data: 03-xy
+    left_img_path = '../data/rg_rarb_train_03/A5_L_X0.500_Y-0.500_Z-2.596_Ra0.000_Rb0.000_F1.090_D0.223.jpg'
+    right_img_path = '../data/rg_rarb_train_0e/B5_R_X0.500_Y-0.500_Z-2.596_Ra0.000_Rb0.000_F1.090_D0.223.jpg'
+
 
     main(left_img_path, right_img_path)
